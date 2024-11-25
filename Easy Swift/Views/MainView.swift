@@ -53,7 +53,7 @@ struct iosMainView: View {
         default:
             NavigationView {
                 List {
-                    NavigationLink("生成二维码", destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/))
+                    NavigationLink("二维码", destination: QrcodeView())
                     Button(action: {}) {
                         Text("申请相机权限")
                     }
