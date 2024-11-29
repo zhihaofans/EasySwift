@@ -36,6 +36,7 @@ struct iosMainView: View {
             NavigationView {
                 List {
                     NavigationLink("二维码", destination: QrcodeView())
+                    NavigationLink("哔了个哩", destination: BiliMainView())
                     Button(action: {}) {
                         Text("申请相机权限")
                     }
