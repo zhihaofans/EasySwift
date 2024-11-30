@@ -57,7 +57,6 @@ class BiliLoginService {
             do {
                 switch response.result {
                 case let .success(value):
-
                     let checkResult = try JSONDecoder().decode(BilibiliLoginQrcodeCheckResult.self, from: value.data(using: .utf8)!)
                     debugPrint(checkResult.code)
                     if checkResult.code == 0 {
@@ -68,7 +67,6 @@ class BiliLoginService {
                                 let cookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: URL)
                                 DispatchQueue.global(qos: .userInitiated).async {
                                     // 在这里执行耗时的任务
-
                                     self.setLoginCookies(cookies: cookies)
                                     // 完成后，在主线程更新 UI
                                     DispatchQueue.main.async {
@@ -133,6 +131,14 @@ class BiliLoginService {
 
     func getSid()->String {
         return getCookieKey(key: "sid") ?? ""
+    }
+
+    func getRefreshToken()->String? {
+        return KeychainUtil().getString(forKey: keychainHeader + ".refresh_token")
+    }
+
+    func setRefreshToken(_ refresh_token: String)->Bool {
+        return KeychainUtil().saveString(forKey: keychainHeader + ".refresh_token", value: refresh_token)
     }
 
     func isLogin()->Bool {
