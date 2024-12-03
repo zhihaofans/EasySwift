@@ -16,6 +16,7 @@ class BiliLoginService {
         "Referer": "https://www.bilibili.com/",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     ]
+    private let cookieKeys = ["bili_jct", "DedeUserID__ckMd5", "SESSDATA", "DedeUserID", "sid"]
     private let http = HttpUtil()
     init() {
         http.setHeader(headers)
@@ -109,6 +110,17 @@ class BiliLoginService {
         return KeychainUtil().saveString(forKey: keychainHeader + ".cookie", value: cookie)
     }
 
+    func hasCookie()->Bool {
+        return itemExists(forKey: keychainHeader + ".cookie")
+    }
+
+    func removeCookie() {
+        for key in cookieKeys {
+            let removeSu = KeychainUtil().remove(forKey: keychainHeader + ".cookie." + key)
+            print("\(key): \(removeSu)")
+        }
+    }
+
     func getCookiesString()->String {
         return "bili_jct=\(getbili_jct());DedeUserID__ckMd5=\(getDedeUserID__ckMd5());SESSDATA=\(getSESSDATA());DedeUserID=\(getUid())"
     }
@@ -143,5 +155,16 @@ class BiliLoginService {
 
     func isLogin()->Bool {
         return getUid().isNotEmpty && getSESSDATA().isNotEmpty && getbili_jct().isNotEmpty
+    }
+
+    private func itemExists(forKey key: String)->Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: kCFBooleanTrue as Any,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
+        return status == errSecSuccess
     }
 }

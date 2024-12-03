@@ -27,9 +27,10 @@ struct BiliMainView: View {
 
             if isLogin {
                 // TODO: 已登录
+                Text("已登录").font(.largeTitle)
             } else {
 //                Text("未登录").font(.largeTitle)
-                BiliLoginView()
+                BiliLoginView(isLogin: isLogin)
             }
         }
         .onAppear {
@@ -56,6 +57,7 @@ struct BiliMainView: View {
 }
 
 struct BiliLoginView: View {
+    @State var isLogin = false
     @State private var showingAlert = false
     @State private var alertText: String = "未知错误"
     @State private var loginDataLoaded = false
@@ -106,6 +108,7 @@ struct BiliLoginView: View {
                             showingAlert = true
                             if setSu {
                                 // TODO: 登录成功后操作
+                                isLogin = true
                             }
                         } else {
                             alertText = checkResult.message
