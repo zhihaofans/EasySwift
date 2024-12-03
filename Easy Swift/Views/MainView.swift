@@ -50,16 +50,15 @@ struct iosMainView: View {
                         Text(alertText)
                     }
                 }
-                .navigationTitle(AppUtil().getAppName() /* "哔了个哩" */ )
+                .navigationTitle(AppUtil().getAppName())
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
-                            // TODO: 这里跳转到个人页面或登录界面
                             Image(systemName: "person")
                         }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
+                        NavigationLink(destination: SettingView()) {
                             Image(systemName: "gear")
                         }
                     }
@@ -102,12 +101,11 @@ private struct MoreView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
-                        // TODO: 这里跳转到个人页面或登录界面
                         Image(systemName: "person")
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
+                    NavigationLink(destination: SettingView()) {
                         Image(systemName: "gear")
                     }
                 }
