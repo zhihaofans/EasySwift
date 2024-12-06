@@ -65,28 +65,28 @@ struct iosMainView: View {
                 }
             }
         }
-        TabView(selection: $selectedTab) {
-            Text("")
-                .tabItem {
-                    Label("主页", systemImage: "house")
-                }
-                .tag(0)
-
-            Text("")
-                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
-                .tabItem {
-                    Label("扫一扫", systemImage: "qrcode.viewfinder")
-                }
-                .tag(1)
-
-            Text("")
-                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
-                .tabItem {
-                    Label("更多", systemImage: "ellipsis")
-                }
-                .tag(2)
-        }
-        .frame(maxHeight: 50) // 限制最大高度
+//        TabView(selection: $selectedTab) {
+//            Text("")
+//                .tabItem {
+//                    Label("主页", systemImage: "house")
+//                }
+//                .tag(0)
+//
+//            Text("")
+//                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
+//                .tabItem {
+//                    Label("扫一扫", systemImage: "qrcode.viewfinder")
+//                }
+//                .tag(1)
+//
+//            Text("")
+//                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
+//                .tabItem {
+//                    Label("更多", systemImage: "ellipsis")
+//                }
+//                .tag(2)
+//        }
+//        .frame(maxHeight: 50) // 限制最大高度
     }
 }
 

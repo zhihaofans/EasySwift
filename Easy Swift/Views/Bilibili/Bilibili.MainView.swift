@@ -24,13 +24,19 @@ struct BiliMainView: View {
 //                    }
 //                }
 //            }
-
             if isLogin {
                 // TODO: 已登录
-                Text("已登录").font(.largeTitle)
+//                Text("已登录").font(.largeTitle)
+                BiliHomeView()
             } else {
 //                Text("未登录").font(.largeTitle)
-                BiliLoginView(isLogin: isLogin)
+                BiliLoginView(isLogin: isLogin).toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {}) {
+                            Text("设置")
+                        }
+                    }
+                }
             }
         }
         .onAppear {
@@ -46,13 +52,83 @@ struct BiliMainView: View {
             Text(self.alertText)
         }
         .setNavigationTitle("哔了个哩")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {}) {
-                    Text("设置")
+    }
+}
+
+struct BiliHomeView: View {
+    @State private var selectedTab = 0
+    var body: some View {
+        switch selectedTab {
+        case 1:
+//            Text("test")
+            BiliDynamicView()
+
+        case 2:
+            List {
+//                    NavigationLink("工具", destination: ToolView())
+            }
+            .navigationTitle("更多")
+            .toolbar {
+//                    ToolbarItem(placement: .navigationBarTrailing) {
+//                        NavigationLink(destination: UserView()) {
+//                            // TODO: 这里跳转到个人页面或登录界面
+//                            Image(systemName: "person")
+//                        }
+//                    }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SettingView()) {
+                        Image(systemName: "gear")
+                    }
                 }
             }
+
+        default:
+            List {
+                NavigationLink("签到", destination: QrcodeView())
+                NavigationLink("稍后再看", destination: QrcodeView())
+                NavigationLink("历史记录", destination: QrcodeView())
+                NavigationLink("热门榜", destination: QrcodeView())
+                NavigationLink("搜索", destination: QrcodeView())
+                NavigationLink("工具", destination: QrcodeView())
+            }
+            .navigationTitle("哔了个哩")
+            .toolbar {
+//                    ToolbarItem(placement: .navigationBarTrailing) {
+//                        NavigationLink(destination: UserView()) {
+//                            // TODO: 这里跳转到个人页面或登录界面
+//                            Image(systemName: "person")
+//                        }
+//                    }
+                // TODO: 改成哔哩哔哩设置界面
+//                ToolbarItem(placement: .navigationBarTrailing) {
+//                    NavigationLink(destination: SettingView()) {
+//                        Image(systemName: "gear")
+//                    }
+//                }
+            }
         }
+        TabView(selection: $selectedTab) {
+            Text("")
+                .tabItem {
+                    Label("主页", systemImage: "house")
+                }
+                .tag(0)
+
+            Text("")
+                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
+                .tabItem {
+                    Label("动态", systemImage: "fanblades")
+                }
+                .tag(1)
+
+            Text("")
+                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
+                .tabItem {
+                    Label("更多", systemImage: "ellipsis")
+                }
+                .tag(2)
+        }
+        .frame(maxHeight: 50) // 限制最大高度
     }
 }
 
@@ -83,7 +159,7 @@ struct BiliLoginView: View {
                     Text("请安装APP")
 
                 } else {
-                    Image(uiImage: qrImage!).resizable().frame(width: /*@START_MENU_TOKEN@*/100/*@END_MENU_TOKEN@*/, height: 100)
+                    Image(uiImage: qrImage!).resizable().frame(width: 200, height: 200)
                 }
                 Button(action: {
                     Task {
@@ -154,6 +230,36 @@ struct BiliLoginView: View {
                 // self.getQrcodeData()
             }
         }.navigationTitle("哔哩哔哩登入")
+    }
+}
+
+struct BiliLoginedMainView: View {
+    var body: some View {
+        NavigationView {
+            List {
+                NavigationLink("签到", destination: Text("Text"))
+                NavigationLink("稍后再看", destination: Text("Text"))
+                NavigationLink("历史记录", destination: Text("Text"))
+                NavigationLink("热门榜", destination: Text("Text"))
+                NavigationLink("搜索", destination: Text("Text"))
+                // NavigationLink("动态", destination: HistoryView())
+                // NavigationLink("工具", destination: ToolView())
+            }
+            .navigationTitle(AppUtil().getAppName() /* "哔了个哩" */ )
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: Text("Text")) {
+                        // TODO: 这里跳转到个人页面或登录界面
+                        Image(systemName: "person")
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SettingView()) {
+                        Image(systemName: "gear")
+                    }
+                }
+            }
+        }
     }
 }
 
