@@ -84,12 +84,12 @@ struct BiliHomeView: View {
 
         default:
             List {
-                NavigationLink("签到", destination: QrcodeView())
-                NavigationLink("稍后再看", destination: QrcodeView())
-                NavigationLink("历史记录", destination: QrcodeView())
-                NavigationLink("热门榜", destination: QrcodeView())
-                NavigationLink("搜索", destination: QrcodeView())
-                NavigationLink("工具", destination: QrcodeView())
+                NavigationLink("签到", destination: BiliDynamicView())
+                NavigationLink("稍后再看", destination: BiliDynamicView())
+                NavigationLink("历史记录", destination: BiliDynamicView())
+                NavigationLink("热门榜", destination: BiliDynamicView())
+                NavigationLink("搜索", destination: BiliDynamicView())
+                NavigationLink("工具", destination: BiliDynamicView())
             }
             .navigationTitle("哔了个哩")
             .toolbar {
