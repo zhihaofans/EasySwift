@@ -164,7 +164,8 @@ struct BiliLoginView: View {
                 Button(action: {
                     Task {
                         // 在这里执行耗时的任务
-                        AppUtil().openUrl(qrcodeUrl)
+//                        AppUtil().openUrl(qrcodeUrl)
+                        BiliAppService().openAppUrl(qrcodeUrl)
                         // 完成后，在主线程更新 UI
 //                            DispatchQueue.main.async {
 //                                // 更新 UI
