@@ -84,7 +84,7 @@ struct BiliHomeView: View {
 
         default:
             List {
-                NavigationLink("签到", destination: BiliDynamicView())
+                NavigationLink("签到", destination: BiliCheckinView())
                 NavigationLink("稍后再看", destination: BiliDynamicView())
                 NavigationLink("历史记录", destination: BiliDynamicView())
                 NavigationLink("热门榜", destination: BiliDynamicView())
