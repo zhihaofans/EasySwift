@@ -34,7 +34,7 @@ struct BiliDynamicView: View {
                                 switch item.type {
 //                                    case dynamicType.VIDEO:
 //                                        NavigationLink {
-//                                            VideoInfoView(bvid: item.modules.module_dynamic.major?.archive?.bvid ?? "")
+//                                            BiliVideoInfoView(bvid: item.modules.module_dynamic.major?.archive?.bvid ?? "")
 //                                        } label: {
 //                                            DynamicItemImageView(itemData: item)
 //                                                .contentShape(Rectangle()) // 加这行才实现可点击
@@ -172,13 +172,13 @@ struct DynamicItemImageView: View {
                     let drawList: [BiliDynamicListItemModuleDynamicMajorDrawItem]=itemData.modules.module_dynamic.major?.draw?.items ?? []
                     if itemData.type == dynamicType.DRAW && drawList.isNotEmpty {
                         NavigationLink {
-                            // TODO: PreviewView(type: "image", dataList: drawList.map { $0.src })
+                            BiliPreviewView(type: "image", dataList: drawList.map { $0.src })
                         } label: {
                             BiliDynamicImageItemView(imageUrl: imageUrl!)
                         }
                     } else if itemData.type == dynamicType.VIDEO {
                         NavigationLink {
-                            // TODO: VideoInfoView(bvid: itemData.modules.module_dynamic.major?.archive?.bvid ?? "")
+                            BiliVideoInfoView(bvid: itemData.modules.module_dynamic.major?.archive?.bvid ?? "")
                         } label: {
                             BiliDynamicImageItemView(imageUrl: imageUrl!)
                         }

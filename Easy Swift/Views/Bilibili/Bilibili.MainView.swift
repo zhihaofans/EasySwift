@@ -70,7 +70,7 @@ struct BiliHomeView: View {
             .navigationTitle("更多")
             .toolbar {
 //                    ToolbarItem(placement: .navigationBarTrailing) {
-//                        NavigationLink(destination: UserView()) {
+//                        NavigationLink(destination: BiliUserView()) {
 //                            // TODO: 这里跳转到个人页面或登录界面
 //                            Image(systemName: "person")
 //                        }
@@ -93,12 +93,12 @@ struct BiliHomeView: View {
             }
             .navigationTitle("哔了个哩")
             .toolbar {
-//                    ToolbarItem(placement: .navigationBarTrailing) {
-//                        NavigationLink(destination: UserView()) {
-//                            // TODO: 这里跳转到个人页面或登录界面
-//                            Image(systemName: "person")
-//                        }
-//                    }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: BiliUserView()) {
+                        // TODO: 这里跳转到个人页面或登录界面
+                        Image(systemName: "person")
+                    }
+                }
                 // TODO: 改成哔哩哔哩设置界面
 //                ToolbarItem(placement: .navigationBarTrailing) {
 //                    NavigationLink(destination: SettingView()) {

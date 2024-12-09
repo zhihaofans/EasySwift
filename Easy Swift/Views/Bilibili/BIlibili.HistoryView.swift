@@ -22,7 +22,7 @@ struct BiliHistoryView: View {
                         ForEach(historyList, id: \.history.oid) { item in
                             if item.history.business == "archive" {
                                 NavigationLink {
-                                    // VideoInfoView(bvid: item.history.bvid!)
+                                     BiliVideoInfoView(bvid: item.history.bvid!)
                                 } label: {
                                     BiliHistoryItemView(itemData: item)
                                 }

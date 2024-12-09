@@ -21,7 +21,7 @@ struct BiliLaterToWatchView: View {
                     LazyVStack {
                         ForEach(later2watchList, id: \.bvid) { item in
                             NavigationLink {
-                                // VideoInfoView(bvid: item.bvid)
+                                BiliVideoInfoView(bvid: item.bvid)
                             } label: {
                                 BiliLater2WatchItemView(itemData: item)
                             }
@@ -68,7 +68,7 @@ struct BiliLater2WatchItemView: View {
     var itemData: BiliLater2WatchItem
     var body: some View {
 //        NavigationLink {
-//            VideoInfoView(id: workFolder.id)
+//            BiliVideoInfoView(id: workFolder.id)
 //        } label: {
 //            Label("Work Folder", systemImage: "folder")
 //        }
