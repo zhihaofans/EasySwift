@@ -37,23 +37,24 @@ struct BiliCheckinView: View {
                             }
                         }
                     }
-                    ListItemLoadingView(title: "直播签到", isLoading: $liveLoading, loadingColor: Color.green) {
-                        Task {
-                            LiveService().checkIn { result in
-                                DispatchQueue.main.async {
-                                    liveLoading = false
-                                    alertText = result.message
-                                    showingAlert = true
-                                }
-                            } fail: { error in
-                                DispatchQueue.main.async {
-                                    liveLoading = false
-                                    showingAlert = true
-                                    alertText = error
-                                }
-                            }
-                        }
-                    }
+                    // 该签到已取消
+//                    ListItemLoadingView(title: "直播签到", isLoading: $liveLoading, loadingColor: Color.green) {
+//                        Task {
+//                            LiveService().checkIn { result in
+//                                DispatchQueue.main.async {
+//                                    liveLoading = false
+//                                    alertText = result.message
+//                                    showingAlert = true
+//                                }
+//                            } fail: { error in
+//                                DispatchQueue.main.async {
+//                                    liveLoading = false
+//                                    showingAlert = true
+//                                    alertText = error
+//                                }
+//                            }
+//                        }
+//                    }
                 }
                 Section(header: Text("大会员")) {
                     ListItemLoadingView(title: "大积分签到", isLoading: $vipPointLoading, loadingColor: Color.blue) {
