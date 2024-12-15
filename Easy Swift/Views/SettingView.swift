@@ -38,7 +38,7 @@ struct SettingView: View {
                     }
                     .alert(alertTitle, isPresented: $showingAlert) {
                         Button("清空", action: {
-                            let setSu = BiliLoginService().removeCookie()
+                            BiliLoginService().removeCookie()
 //                            print("清空登录数据" + setSu.string(trueStr: "成功", falseStr: "失败"))
                         })
                         Button("No", action: {})
