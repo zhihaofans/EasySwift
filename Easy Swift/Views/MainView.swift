@@ -39,6 +39,7 @@ struct iosMainView: View {
                     NavigationLink("哔了个哩", destination: BiliMainView())
                     NavigationLink("计算器", destination: CalculatorView())
                     NavigationLink("剪贴板", destination: ClipboardView())
+                    NavigationLink("Swift UI测试", destination: Text("Loading..."))
                     Button(action: {}) {
                         Text("申请相机权限")
                     }
