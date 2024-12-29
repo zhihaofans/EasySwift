@@ -38,11 +38,15 @@ struct ClipboardContentView: View {
                 //                            // TODO: add note
                 //                        }
                 //                        .buttonStyle(.borderedProminent)
-                Text("随便记一下")
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+                Button(action: {
+                    showingMenu=true
+                }) {
+                    Text("随便记一下")
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
 //                    }
             } else {
                 List(clips) { item in
