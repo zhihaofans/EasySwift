@@ -254,14 +254,15 @@ private struct ClipboardEditorView: View {
             Text("删了就找不回了！")
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    isShowRemoveAlert=true
-                }) {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red) // 将颜色改为红色
-                }
-            }
+            // 删除按钮没用
+//            ToolbarItem(placement: .navigationBarTrailing) {
+//                Button(action: {
+//                    isShowRemoveAlert=true
+//                }) {
+//                    Image(systemName: "trash")
+//                        .foregroundColor(.red) // 将颜色改为红色
+//                }
+//            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
                     self.item.text=clipContent
