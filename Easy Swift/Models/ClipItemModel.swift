@@ -1,6 +1,6 @@
 //
 //  NoteItemModel.swift
-//  Just Note
+//  Easy Swift
 //
 //  Created by zzh on 2024/8/25.
 //
@@ -8,8 +8,6 @@
 import Foundation
 import SwiftData
 
-// 下面是用SwiftData重构，后续可能会将[Note]词改成[纪录Log]
-// Note记录本身
 @Model
 class ClipItemDataModel {
     var id: UUID
