@@ -21,7 +21,7 @@ struct StaffContentView: View {
     @State private var alertTitle: String="未知错误"
     @State private var alertText: String="未知错误"
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ClipItemDataModel.create_time, order: .reverse) private var clips: [StaffManageItemModel]
+    @Query(sort: \StaffManageItemModel.create_time, order: .reverse) private var clips: [StaffManageItemModel]
     @State private var clipList=[StaffManageItemModel]()
     var body: some View {
         VStack {
