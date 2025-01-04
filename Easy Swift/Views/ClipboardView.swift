@@ -219,7 +219,7 @@ private struct ClipboardEditorView: View {
     @State private var clipContent: String
     @Environment(\.modelContext) private var modelContext
     @Environment(\.presentationMode) var presentationMode
-    @State private var isShowRemoveAlert=false
+    @State private var isShareSheetPresented=false
     init(path: [ClipItemDataModel], item: ClipItemDataModel) {
         self.path=path
         self.item=item
@@ -231,38 +231,19 @@ private struct ClipboardEditorView: View {
             TextEditor(text: $clipContent)
         }
         .setNavigationTitle("编辑")
-        .alert("确定删除⚠️", isPresented: $isShowRemoveAlert) {
-            Button("YES", action: {
-                // NoteService().removeNote(id: noteItem.id)
-                // TODO: 用SwiftData重构
-                do {
-                    modelContext.delete(self.item)
-                    path=[item]
-                    try modelContext.save()
-                    print("success to delete context")
-                } catch {
-                    print("Failed to delete context: \(error)")
-                }
-                print(modelContext)
-                presentationMode.wrappedValue.dismiss() // 退出当前视图
-            })
-
-            Button("NO", action: {
-                isShowRemoveAlert=false
-            })
-        } message: {
-            Text("删了就找不回了！")
-        }
         .toolbar {
-            // 删除按钮没用
-//            ToolbarItem(placement: .navigationBarTrailing) {
-//                Button(action: {
-//                    isShowRemoveAlert=true
-//                }) {
-//                    Image(systemName: "trash")
-//                        .foregroundColor(.red) // 将颜色改为红色
-//                }
-//            }
+            // TODO: 分享按钮
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    isShareSheetPresented=true
+                }) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .sheet(isPresented: $isShareSheetPresented) {
+                    ShareActivityView(activityItems: [item.text])
+                }
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
                     self.item.text=clipContent
