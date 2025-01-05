@@ -239,9 +239,7 @@ private struct ClipboardEditorView: View {
                 }) {
                     Image(systemName: "square.and.arrow.up")
                 }
-                .sheet(isPresented: $isShareSheetPresented) {
-                    ShareActivityView(activityItems: [item.text])
-                }
+                .showShareTextView(clipContent, isPresented: $isShareSheetPresented)
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {

@@ -15,15 +15,12 @@ struct UITestView: View {
         VStack {
             NavigationView {
                 List {
-                    NavigationLink("二维码", destination: QrcodeView())
                     Button(action: {
                         isShareSheetPresented = true
                     }) {
                         Text("调用系统分享")
                     }
-                    .sheet(isPresented: $isShareSheetPresented) {
-                        ShareActivityView(activityItems: [textToShare])
-                    }
+                    .showShareTextView(textToShare, isPresented: $isShareSheetPresented)
                 }
             }
         }
