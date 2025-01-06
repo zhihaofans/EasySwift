@@ -33,11 +33,12 @@ struct ClipboardContentView: View {
             // 下面是新代码SwiftData
             // 显示所有任务
             if clips.isEmpty {
-//                    NavigationLink(destination: EditView(path: noteList)) {
-                //                        Button("随便记一下") {
-                //                            // TODO: add note
-                //                        }
-                //                        .buttonStyle(.borderedProminent)
+                NavigationLink(destination: ClipboardEditorView(path: clipList)) {
+                    Button("随便记一下") {
+                        // TODO: add note
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
                 Button(action: {
                     showingMenu=true
                 }) {
@@ -66,7 +67,8 @@ struct ClipboardContentView: View {
         .setNavigationTitle("剪贴板")
         .alert("新增剪贴板", isPresented: $showingMenu) {
             Button("输入", action: {
-                showInputPopup=true
+//                showInputPopup=true
+
             })
             Button("剪贴板", action: {
                 addFromClip()
@@ -220,10 +222,11 @@ private struct ClipboardEditorView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.presentationMode) var presentationMode
     @State private var isShareSheetPresented=false
-    init(path: [ClipItemDataModel], item: ClipItemDataModel) {
+    init(path: [ClipItemDataModel], item: ClipItemDataModel?=nil) {
+        let nowTime=DateUtil().getTimestamp()
         self.path=path
-        self.item=item
-        self.clipContent=item.text
+        self.item=item ?? ClipItemDataModel(id: UUID(), text: "", create_time: nowTime, update_time: nowTime)
+        self.clipContent=self.item.text
     }
 
     var body: some View {
