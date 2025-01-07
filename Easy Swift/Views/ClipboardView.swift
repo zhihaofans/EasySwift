@@ -241,22 +241,30 @@ private struct ClipboardEditorView: View {
         .setNavigationTitle("编辑")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    isShareSheetPresented=true
-                }) {
-                    Image(systemName: "square.and.arrow.up")
-                }
-                .showShareTextView(clipContent, isPresented: $isShareSheetPresented)
-            }
+                Menu {
+                    // 添加标题
+                    Text("动作插件")
+                        .font(.headline)
+                        .foregroundColor(.gray)
 
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    // TODO: 动作插件功能
-                }) {
-                    Image(systemName: "square.grid.2x2")
+                    Divider() // 分隔线
+                    Button(action: {
+                        isShareSheetPresented=true
+                    }) {
+                        Label("分享", systemImage: "square.and.arrow.up")
+                    }
+                    Button("分词") {
+                        print("选项 2 被点击")
+                    }
+                    Button("复制") {
+                        print("选项 2 被点击")
+                    }
+                } label: {
+                    Label("菜单", systemImage: "square.grid.2x2")
                 }
             }
         }
+        .showShareTextView(clipContent, isPresented: $isShareSheetPresented)
     }
 
     func saveText() {
