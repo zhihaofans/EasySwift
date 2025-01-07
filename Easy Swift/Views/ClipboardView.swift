@@ -233,9 +233,13 @@ private struct ClipboardEditorView: View {
         VStack {
             TextEditor(text: $clipContent)
         }
+        .onDisappear {
+            print("退出编辑界面")
+            print(clipContent)
+            self.saveText()
+        }
         .setNavigationTitle("编辑")
         .toolbar {
-            // TODO: 分享按钮
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
                     isShareSheetPresented=true
@@ -247,26 +251,29 @@ private struct ClipboardEditorView: View {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    self.item.text=clipContent
-                    self.item.update_time=DateUtil().getTimestamp()
-                    print(item)
-                    modelContext.insert(item)
-                    path=[item]
-                    //        isNew = false
-                    // 4. 保存当前上下文的更改，将新任务持久化到存储中
-                    //        try? modelContext.save()
-                    do {
-                        try modelContext.save()
-                    } catch {
-                        print("Failed to save context: \(error)")
-                    }
-                    print(modelContext)
+                    // TODO: 动作插件功能
                 }) {
-                    // TODO: 手动添加
-                    Image(systemName: "square.and.arrow.down")
+                    Image(systemName: "square.grid.2x2")
                 }
             }
         }
+    }
+
+    func saveText() {
+        item.text=clipContent
+        item.update_time=DateUtil().getTimestamp()
+        print(item)
+        modelContext.insert(item)
+        path=[item]
+        //        isNew = false
+        // 4. 保存当前上下文的更改，将新任务持久化到存储中
+        //        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save context: \(error)")
+        }
+        print(modelContext)
     }
 }
 
