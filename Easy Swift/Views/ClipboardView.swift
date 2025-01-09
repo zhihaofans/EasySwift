@@ -23,22 +23,24 @@ struct ClipboardContentView: View {
     @State private var showInputPopup=false
     @State private var alertTitle: String="未知错误"
     @State private var alertText: String="未知错误"
-
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClipItemDataModel.create_time, order: .reverse) private var clips: [ClipItemDataModel]
     @State private var clipList=[ClipItemDataModel]()
-    private let options=["选项一", "选项二", "选项三", "选项四"]
+    @State private var clipContentList=[String]()
     var body: some View {
         VStack {
             // 下面是新代码SwiftData
             // 显示所有任务
             if clips.isEmpty {
-                NavigationLink(destination: ClipboardEditorView(path: clipList)) {
-                    Button("随便记一下") {
-                        // TODO: add note
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+//                NavigationLink(destination: ClipboardEditorView(path: clipList)) {
+//                    Button(action: {}) {
+//                        Text("随便记一下")
+//                            .padding()
+//                            .background(Color.blue)
+//                            .foregroundColor(.white)
+//                            .cornerRadius(8)
+//                    }
+//                }
                 Button(action: {
                     showingMenu=true
                 }) {
@@ -48,7 +50,6 @@ struct ClipboardContentView: View {
                         .foregroundColor(.white)
                         .cornerRadius(8)
                 }
-//                    }
             } else {
                 List(clips) { item in
                     ClipItemView(path: clipList, item: item)
@@ -67,8 +68,7 @@ struct ClipboardContentView: View {
         .setNavigationTitle("剪贴板")
         .alert("新增剪贴板", isPresented: $showingMenu) {
             Button("输入", action: {
-//                showInputPopup=true
-
+                showInputPopup=true
             })
             Button("剪贴板", action: {
                 addFromClip()
@@ -117,6 +117,7 @@ struct ClipboardContentView: View {
         do {
             let clips=try modelContext.fetch(fetchRequest)
             print("Fetched Clips: " + clips.length.toString)
+            clipContentList=clips.map { $0.text }
         } catch {
             print("Failed to fetch clips: \(error)")
         }
@@ -125,13 +126,16 @@ struct ClipboardContentView: View {
     private func addNewItem(_ text: String) {
         // 1. 确保新任务的标题不是空的
         guard !text.isEmpty else { return }
-
+        if clipContentList.contains(text) {
+            print("剪贴板已存在该内容")
+            return
+        }
         // 2. 创建一个新的 Task 对象，使用当前输入的任务标题
 //        let newTask = NoteItemDataModel(text: noteItem.text)
 //        noteItem.image = image?.heicData()
         let createTime=DateUtil().getTimestamp()
         let clipItem=ClipItemDataModel(id: UUID(), text: text, create_time: createTime, update_time: createTime)
-        print(clipItem)
+//        print(clipItem)
         // 3. 使用 modelContext 将新任务插入到数据模型中
         modelContext.insert(clipItem)
         clipList=[clipItem]
@@ -143,7 +147,7 @@ struct ClipboardContentView: View {
         } catch {
             print("Failed to save context: \(error)")
         }
-        print(modelContext)
+//        print(modelContext)
         // 5. 清空输入框，准备输入下一个任务 。这里忽略
 //        newTitle = ""
     }
@@ -238,7 +242,8 @@ private struct ClipboardEditorView: View {
             print(clipContent)
             self.saveText()
         }
-        .setNavigationTitle("编辑")
+//        .setNavigationTitle("编辑")
+        .setNavigationTitle(clipContent.count.toString)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
@@ -255,10 +260,10 @@ private struct ClipboardEditorView: View {
                     }
                     Button("分词") {
                         print("选项 2 被点击")
-                    }
+                    }.disabled(true)
                     Button("复制") {
                         print("选项 2 被点击")
-                    }
+                    }.disabled(true)
                 } label: {
                     Label("菜单", systemImage: "square.grid.2x2")
                 }
