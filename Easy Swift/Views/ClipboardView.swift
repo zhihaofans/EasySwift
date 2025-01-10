@@ -57,6 +57,7 @@ struct ClipboardContentView: View {
                 }.onChange(of: clips) { _, _ in
                     print("当前剪贴板内容：\(UIPasteboard.general.string ?? "空")")
                     print("当前 clipList 数据：\(clipList)")
+                    clipContentList=clips.map { $0.text }
                 }
             }
         }
@@ -118,6 +119,8 @@ struct ClipboardContentView: View {
             let clips=try modelContext.fetch(fetchRequest)
             print("Fetched Clips: " + clips.length.toString)
             clipContentList=clips.map { $0.text }
+            print("clipContentList: " + clipContentList.length.toString)
+
         } catch {
             print("Failed to fetch clips: \(error)")
         }
