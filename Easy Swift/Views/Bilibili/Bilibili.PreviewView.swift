@@ -9,6 +9,7 @@ import SwiftUI
 
 struct BiliPreviewView: View {
     @State private var imageList: [String]
+    @AppStorage("bilibili_preview_image_page_mode") private var imageListPageMode = false
     init(type: String, dataList: [String]) {
         self.imageList = dataList
     }
