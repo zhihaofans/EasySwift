@@ -85,8 +85,10 @@ struct ClipboardContentView: View {
                 inputText: $userInput,
                 isPresented: $showInputPopup)
             { inputText in
+                clipContentList=clips.map { $0.text }
                 if inputText.isNotEmpty {
                     self.addNewItem(inputText)
+                    userInput=""
                 }
             }
         }
@@ -106,6 +108,7 @@ struct ClipboardContentView: View {
                 }
             }
         }.onAppear {
+            print("onAppear")
             manualFetchTasks()
         }
     }
@@ -278,7 +281,7 @@ private struct ClipboardEditorView: View {
     func saveText() {
         item.text=clipContent
         item.update_time=DateUtil().getTimestamp()
-        print(item)
+//        print(item)
         modelContext.insert(item)
         path=[item]
         //        isNew = false
