@@ -8,22 +8,14 @@
 import SwiftUI
 
 struct CalculatorView: View {
-    private let calculatorType=CalculatorType()
     @State private var showingAlert=false
     @State private var alertTitle: String="未知错误"
     @State private var alertText: String="未知错误"
-    @State private var nowCalculatorType: String=""
     var body: some View {
         VStack {
-            Form {
-                Menu("类型:\(nowCalculatorType)") {
-                    Button("纺织品", action: { nowCalculatorType=calculatorType.TEXTILE })
-                }
-                Section(header: Text("输入二维码文本")) {
-                    TextField(/*@START_MENU_TOKEN@*/"Placeholder"/*@END_MENU_TOKEN@*/, text: $alertText)
-                    Button(action: {}) {
-                        Text("计算")
-                    }
+            NavigationView {
+                List {
+                    NavigationLink("人体BMI计算", destination: BMICalculatorView())
                 }
             }
         }
@@ -47,10 +39,18 @@ struct CalculatorView: View {
     }
 }
 
-class CalculatorType {
-    let TEXTILE="纺织品" // 纺织品
+private struct BMICalculatorView: View {
+    @State private var inputHeight: Float=180
+    @State private var inputWeight: Float=80.0
+    var body: some View {
+        VStack {
+            List {
+                
+            }
+        }
+    }
 }
 
-#Preview {
-    CalculatorView()
-}
+// #Preview {
+//    CalculatorView()
+// }
