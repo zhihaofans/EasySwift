@@ -12,9 +12,10 @@ struct Github_MainView: View {
     @State private var selectedTab = 0
     var body: some View {
         switch selectedTab {
-//        case 1:
+        case 0:
             // TODO: Github star / watch / fork 界面
 //            Text("test")
+            GithubTrendingView()
 
         case 2:
             // TODO: 我的Github界面、设置界面、历史记录界面
@@ -60,25 +61,61 @@ struct Github_MainView: View {
         TabView(selection: $selectedTab) {
             Text("")
                 .tabItem {
-                    Label("主页", systemImage: "house")
+                    Label("探索", systemImage: "flame")
                 }
                 .tag(0)
 
             Text("")
                 .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
                 .tabItem {
-                    Label("动态", systemImage: "fanblades")
+                    Label("收藏", systemImage: "star.fill")
                 }
                 .tag(1)
 
             Text("")
                 .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
                 .tabItem {
-                    Label("更多", systemImage: "ellipsis")
+                    Label("我的", systemImage: "person.fill")
                 }
                 .tag(2)
         }
         .frame(maxHeight: 50) // 限制最大高度
+    }
+}
+
+struct GithubTrendingView: View {
+    @State private var trendingList: [GithubTrendingItem] = []
+    var body: some View {
+        VStack {
+            if trendingList.isEmpty {
+                VStack {
+                    List {
+                        ProgressView()
+                    }
+                }
+            } else {
+                List {
+                    ForEach(trendingList, id: \.id) { item in
+                        Text(item.name).font(.title)
+                    }
+                }
+            }
+        }.onAppear {
+            GithubTrendingService().getTrendingList { result in
+                trendingList = result.items
+            } fail: { err in
+                print(err)
+            }
+        }
+        .setNavigationTitle("Github")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+//                NavigationLink(destination: BiliUserView()) {
+                // TODO: 这里跳转到个人页面或登录界面
+                Image(systemName: "person")
+//                }
+            }
+        }
     }
 }
 
