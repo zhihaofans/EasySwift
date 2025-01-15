@@ -83,20 +83,43 @@ struct Github_MainView: View {
     }
 }
 
+enum DateType: String, CaseIterable, Identifiable {
+    case day, week, month
+    var id: Self { self }
+}
+
+enum LanguageType: String, CaseIterable, Identifiable {
+    case swift
+    var id: Self { self }
+}
+
 struct GithubTrendingView: View {
     @State private var trendingList: [GithubTrendingItem] = []
+    @State private var selectedDate: DateType = .day
+    @State private var selectedLanguage: LanguageType = .swift
     var body: some View {
         VStack {
-            if trendingList.isEmpty {
-                VStack {
-                    List {
-                        ProgressView()
-                    }
+            List {
+                Picker(selection: $selectedDate) {
+                    Text("今日").tag(DateType.day)
+                    Text("本周").tag(DateType.week)
+                    Text("本月").tag(DateType.month)
+                } label: {
+                    Text("时间")
                 }
-            } else {
-                List {
+                Picker(selection: $selectedLanguage) {
+                    Text("Swift").tag(LanguageType.swift)
+                } label: {
+                    Text("语言")
+                }
+                if trendingList.isEmpty {
+                    ProgressView()
+                } else {
                     ForEach(trendingList, id: \.id) { item in
-                        Text(item.name).font(.title)
+                        //                        Text(item.name).font(.title)
+                        GithubTrendingContentView(item).onClick {
+                            AppUtil().openUrl(item.html_url)
+                        }
                     }
                 }
             }
@@ -112,8 +135,35 @@ struct GithubTrendingView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
 //                NavigationLink(destination: BiliUserView()) {
                 // TODO: 这里跳转到个人页面或登录界面
-                Image(systemName: "person")
+                Image(systemName: "gear")
 //                }
+            }
+        }
+    }
+}
+
+struct GithubTrendingContentView: View {
+    private let contentItem: GithubTrendingItem
+    init(_ contentItem: GithubTrendingItem) {
+        self.contentItem = contentItem
+    }
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            VStack {
+                Text(contentItem.full_name).font(.title)
+//                .frame(maxHeight: .infinity) // 设置对齐方式
+//                .onClick {
+//                    let webUrl = appService.checkLink(itemData.modules.module_author.jump_url)
+//                    appService.openUrl(appUrl: webUrl, webUrl: webUrl)
+//                }
+
+                Text(contentItem.language)
+                Text("\(contentItem.stargazers_count) stars")
+                    .lineLimit(2)
+                    .padding(.horizontal, 20) // 设置水平方向的内间距
+
+                Spacer()
             }
         }
     }

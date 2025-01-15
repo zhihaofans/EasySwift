@@ -21,7 +21,7 @@ struct GithubTrendingItem: Codable {
     let html_url: String
     let stargazers_count: Int
     let forks_count: Int
-    let language: String?
+    let language: String
     let owner: GithubTrendingItemOwner
     let license: GithubTrendingItemLicense?
 }
