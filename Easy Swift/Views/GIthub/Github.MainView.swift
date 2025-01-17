@@ -5,6 +5,7 @@
 //  Created by zzh on 2025/1/14.
 //
 
+import SafariServices
 import SwiftUI
 import SwiftUtils
 
@@ -97,6 +98,8 @@ struct GithubTrendingView: View {
     @State private var trendingList: [GithubTrendingItem] = []
     @State private var selectedDate: DateType = .day
     @State private var selectedLanguage: LanguageType = .swift
+    @State private var isShowingSafari = false
+    @State private var safariUrlString: String = "https://www.apple.com"
     var body: some View {
         VStack {
             List {
@@ -118,9 +121,17 @@ struct GithubTrendingView: View {
                     ForEach(trendingList, id: \.id) { item in
                         //                        Text(item.name).font(.title)
                         GithubTrendingContentView(item).onClick {
-                            AppUtil().openUrl(item.html_url)
+                            safariUrlString = item.html_url
+                            isShowingSafari = true
                         }
                     }
+                }
+            }
+            .sheet(isPresented: $isShowingSafari) {
+                if let url = URL(string: safariUrlString) {
+                    SafariView(url: url)
+                } else {
+                    Text("Invalid URL")
                 }
             }
         }.onAppear {
@@ -167,6 +178,16 @@ struct GithubTrendingContentView: View {
             }
         }
     }
+}
+
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        return SFSafariViewController(url: url)
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }
 
 #Preview {
