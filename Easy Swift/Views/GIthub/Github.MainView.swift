@@ -5,7 +5,6 @@
 //  Created by zzh on 2025/1/14.
 //
 
-import SafariServices
 import SwiftUI
 import SwiftUtils
 
@@ -90,7 +89,7 @@ enum DateType: String, CaseIterable, Identifiable {
 }
 
 enum LanguageType: String, CaseIterable, Identifiable {
-    case swift
+    case swift, java, python, go, javascript
     var id: Self { self }
 }
 
@@ -108,12 +107,18 @@ struct GithubTrendingView: View {
                     Text("本周").tag(DateType.week)
                     Text("本月").tag(DateType.month)
                 } label: {
-                    Text("时间")
-                }
+                    Text("时间(暂不支持修改)")
+                }.disabled(true)
                 Picker(selection: $selectedLanguage) {
                     Text("Swift").tag(LanguageType.swift)
+                    Text("Java").tag(LanguageType.java)
+                    Text("Python").tag(LanguageType.python)
+                    Text("Go").tag(LanguageType.go)
+                    Text("JavaScript").tag(LanguageType.javascript)
                 } label: {
                     Text("语言")
+                }.onChange(of: selectedLanguage) { _, _ in
+                    self.loadingTrendingData()
                 }
                 if trendingList.isEmpty {
                     ProgressView()
@@ -127,19 +132,9 @@ struct GithubTrendingView: View {
                     }
                 }
             }
-            .sheet(isPresented: $isShowingSafari) {
-                if let url = URL(string: safariUrlString) {
-                    SafariView(url: url)
-                } else {
-                    Text("Invalid URL")
-                }
-            }
+            .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
         }.onAppear {
-            GithubTrendingService().getTrendingList { result in
-                trendingList = result.items
-            } fail: { err in
-                print(err)
-            }
+            self.loadingTrendingData()
         }
         .setNavigationTitle("Github")
         .toolbar {
@@ -149,6 +144,17 @@ struct GithubTrendingView: View {
                 Image(systemName: "gear")
 //                }
             }
+        }
+    }
+
+    private func loadingTrendingData() {
+        DispatchQueue.main.async {
+            trendingList.removeAll()
+        }
+        GithubTrendingService().getTrendingList(language: selectedLanguage.rawValue) { result in
+            trendingList = result.items
+        } fail: { err in
+            print(err)
         }
     }
 }
@@ -178,16 +184,6 @@ struct GithubTrendingContentView: View {
             }
         }
     }
-}
-
-struct SafariView: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        return SFSafariViewController(url: url)
-    }
-
-    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }
 
 #Preview {
