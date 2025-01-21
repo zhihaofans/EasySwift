@@ -12,6 +12,8 @@ import UIKit
 struct SettingView: View {
 //    @AppStorage("bili_dynamic_image_mode") var isDynamicShowImage: Bool = true
 //    @AppStorage("open_web_in_app") var openWebInApp: Bool = false
+    @AppStorage("github_username") var GithubUsername: String = ""
+    @AppStorage("github_access_token") var GithubAccessToken: String = ""
     @State private var showingAlert = false
     @State private var alertTitle: String = "未知错误"
     @State private var alertText: String = "未知错误"
@@ -28,7 +30,7 @@ struct SettingView: View {
                 //                        Text("使用Bilibili app打开网页")
                 //                    }
                 //                }
-                Section(header: Text("开发者工具")) {
+                Section(header: Text("哔了个哩")) {
                     Button(action: {
                         alertTitle = "你要清空哔哩哔哩功能的登录数据吗？"
                         alertText = "仅用于开发测试"
@@ -46,9 +48,12 @@ struct SettingView: View {
                         Text(alertText)
                     }
                 }
+                Section(header: Text("Github（自动保存）")) {
+                    TextField("用户名", text: $GithubUsername)
+                    SecureField("Access Token", text: $GithubAccessToken)
+                }
                 if let appIcon = getAppIconImage() {
                     AppIconAndNameView(image: appIcon)
-                    // 你可以在你的UI中展示这个appIcon, 比如在UIImageView中
                 } else {
                     Text("Failed to load app icon")
                 }

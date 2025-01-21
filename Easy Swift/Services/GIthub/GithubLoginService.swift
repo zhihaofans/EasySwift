@@ -17,7 +17,15 @@ class GithubLoginService {
         UserDefaultUtil().setString(key: "github_username", value: name)
     }
 
+    func getUserName() -> String {
+        return UserDefaultUtil().getString(key: "github_username", defaultValue: "")
+    }
+
     func setAccessToken(_ token: String) {
         UserDefaultUtil().setString(key: "github_access_token", value: token)
+    }
+
+    func getAccessToken() -> String {
+        return UserDefaultUtil().getString(key: "github_access_token", defaultValue: "")
     }
 }

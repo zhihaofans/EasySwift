@@ -1,15 +1,15 @@
 //
-//  GithubTrendingService.swift
+//  GithubUserService.swift
 //  Easy Swift
 //
-//  Created by zzh on 2025/1/15.
+//  Created by zzh on 2025/1/21.
 //
 
 import Alamofire
 import Foundation
 import SwiftUtils
 
-class GithubTrendingService {
+class GithubUserService {
     private let http = HttpUtil()
     init() {
         let accessToken = GithubLoginService().getAccessToken()
@@ -22,28 +22,31 @@ class GithubTrendingService {
             headers["Authorization"] = "Bearer \(accessToken)"
             headers["Accept"] = "application/vnd.github+json"
         }
+        http.setHeader(headers)
     }
 
-    func getTrendingList(language: String = "Swift", callback: @escaping (GithubTrendingResult)->Void, fail: @escaping (String)->Void) {
-        let url = "https://api.github.com/search/repositories?q=language:\(language)&sort=stars&order=desc"
+    func getStarsList(callback: @escaping ([GithubTrendingItem])->Void, fail: @escaping (String)->Void) {
+        let username = GithubLoginService().getUserName()
+        let url = "https://api.github.com/users/\(username)/starred"
+        print(url)
         http.get(url) { value in
             if value.isEmpty {
-                fail("getTrendingList.result.isEmpty")
+                fail("getStarsList.result.isEmpty")
             } else {
 //                print(value)
                 do {
-                    let result = try JSONDecoder().decode(GithubTrendingResult.self, from: value.data(using: .utf8)!)
-                    debugPrint(result.total_count)
+                    let result = try JSONDecoder().decode([GithubTrendingItem].self, from: value.data(using: .utf8)!)
+//                    debugPrint(result.total_count)
                     callback(result)
                 } catch {
                     print(error)
-                    print("getTrendingList.catch.error")
-                    fail("getTrendingList:\(error)")
+                    print("getStarsList.catch.error")
+                    fail("getStarsList:\(error)")
                 }
             }
         } fail: { error in
             print(error)
-            print("getTrendingList.http.error")
+            print("getStarsList.http.error")
             fail("网络请求错误:\(error)")
         }
     }

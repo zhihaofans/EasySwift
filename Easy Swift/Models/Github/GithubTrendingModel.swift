@@ -17,11 +17,11 @@ struct GithubTrendingItem: Codable {
     let id: Int
     let name: String
     let full_name: String
-    let description: String
+    let description: String?
     let html_url: String
     let stargazers_count: Int
     let forks_count: Int
-    let language: String
+    let language: String?
     let owner: GithubTrendingItemOwner
     let license: GithubTrendingItemLicense?
 }
