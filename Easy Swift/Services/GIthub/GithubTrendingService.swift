@@ -26,11 +26,10 @@ class GithubTrendingService {
             if value.isEmpty {
                 fail("getTrendingList.result.isEmpty")
             } else {
-                print(value)
+//                print(value)
                 do {
                     let result = try JSONDecoder().decode(GithubTrendingResult.self, from: value.data(using: .utf8)!)
                     debugPrint(result.total_count)
-
                     callback(result)
                 } catch {
                     print(error)

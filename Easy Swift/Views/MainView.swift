@@ -41,7 +41,7 @@ struct iosMainView: View {
                     NavigationLink("剪贴板", destination: ClipboardView())
                     NavigationLink("Swift UI测试", destination: UITestView())
                     NavigationLink("搜索", destination: SearchView())
-                    NavigationLink("Github", destination: Github_MainView())
+                    NavigationLink("Github", destination: GithubMainView())
                     Button(action: {}) {
                         Text("申请相机权限")
                     }

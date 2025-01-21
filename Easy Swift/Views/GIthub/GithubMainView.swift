@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftUtils
 
-struct Github_MainView: View {
+struct GithubMainView: View {
     @State private var selectedTab = 0
     var body: some View {
         switch selectedTab {
@@ -19,23 +19,7 @@ struct Github_MainView: View {
 
         case 2:
             // TODO: 我的Github界面、设置界面、历史记录界面
-            List {
-//                    NavigationLink("工具", destination: ToolView())
-            }
-            .navigationTitle("我的Github")
-            .toolbar {
-//                    ToolbarItem(placement: .navigationBarTrailing) {
-//                        NavigationLink(destination: BiliUserView()) {
-//                            // TODO: 这里跳转到个人页面或登录界面
-//                            Image(systemName: "person")
-//                        }
-//                    }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: SettingView()) {
-                        Image(systemName: "gear")
-                    }
-                }
-            }
+            GithubMyView()
 
         default:
             // TODO: Github 主页、动态、热门榜、搜索
@@ -187,5 +171,5 @@ struct GithubTrendingContentView: View {
 }
 
 #Preview {
-    Github_MainView()
+    GithubMainView()
 }
