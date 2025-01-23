@@ -244,7 +244,7 @@ struct GithubStarsView: View {
             resultList = result
         } fail: { err in
             print(err)
-            errorText = err
+            errorText = err.message
             isLoadingError = true
         }
     }

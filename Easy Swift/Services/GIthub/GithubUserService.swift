@@ -25,13 +25,13 @@ class GithubUserService {
         http.setHeader(headers)
     }
 
-    func getStarsList(callback: @escaping ([GithubTrendingItem])->Void, fail: @escaping (String)->Void) {
+    func getStarsList(callback: @escaping ([GithubTrendingItem])->Void, fail: @escaping (GithubApiResultErrorModel)->Void) {
         let username = GithubLoginService().getUserName()
         let url = "https://api.github.com/users/\(username)/starred"
         print(url)
         http.get(url) { value in
             if value.isEmpty {
-                fail("getStarsList.result.isEmpty")
+                fail(GithubApiResultErrorModel(message: "getStarsList.result.isEmpty", documentation_url: ""))
             } else {
 //                print(value)
                 do {
@@ -41,13 +41,24 @@ class GithubUserService {
                 } catch {
                     print(error)
                     print("getStarsList.catch.error")
-                    fail("getStarsList:\(error)")
+                    if value.contains("documentation_url") {
+                        do {
+                            let apiErrResult = try JSONDecoder().decode(GithubApiResultErrorModel.self, from: value.data(using: .utf8)!)
+                            fail(apiErrResult)
+                        } catch let err_ {
+                            print(err_)
+                            print("getStarsList.catch.error")
+                            fail(GithubApiResultErrorModel(message: "getStarsList:\(err_)", documentation_url: ""))
+                        }
+                    } else {
+                        fail(GithubApiResultErrorModel(message: "getStarsList:\(error)", documentation_url: ""))
+                    }
                 }
             }
         } fail: { error in
             print(error)
             print("getStarsList.http.error")
-            fail("网络请求错误:\(error)")
+            fail(GithubApiResultErrorModel(message: "getStarsList.network:\(error)", documentation_url: ""))
         }
     }
 }
