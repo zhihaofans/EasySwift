@@ -197,6 +197,8 @@ struct GithubStarsView: View {
                 List {
                     Picker(selection: $selectedType) {
                         Text("Stars").tag(StarsViewType.star)
+                        Text("Watch").tag(StarsViewType.watch).disabled(true)
+                        Text("Fork").tag(StarsViewType.fork).disabled(true)
                     } label: {
                         Text("类型")
                     }.disabled(true)
