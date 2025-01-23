@@ -85,6 +85,8 @@ struct BiliVideoInfoItemView: View {
     @State private var alertTitle: String="Error"
     @State private var alertText: String="未知错误"
 
+    @State private var isShowingSafari=false
+    @State private var safariUrlString: String="https://www.apple.com"
     private let appService=BiliAppService()
     init(videoInfo: BiliVideoInfoData) {
         self.videoInfo=videoInfo
@@ -153,6 +155,16 @@ struct BiliVideoInfoItemView: View {
             .foregroundColor(.white)
             .cornerRadius(8)
             Button(action: {
+                safariUrlString="https://www.bilibili.com/video/\(videoInfo.bvid)/"
+                isShowingSafari=true
+            }) {
+                Text("打开网页")
+            }
+            .padding()
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .cornerRadius(8)
+            Button(action: {
                 BiliHistoryService().addLaterToWatch(bvid: videoInfo.bvid) { result in
                     print(result)
                     alertTitle="添加到稍后再看" + (result.code == 0).string(trueStr: "成功", falseStr: "失败")
@@ -181,6 +193,7 @@ struct BiliVideoInfoItemView: View {
                 Text(alertText)
             }
         }
+        .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
     }
 }
 
