@@ -158,19 +158,24 @@ struct GithubTrendingContentView: View {
     var body: some View {
         VStack(alignment: .leading) {
             VStack {
-                Text(contentItem.full_name).font(.title)
+                Text(contentItem.full_name)
+                    .foregroundStyle(.blue)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 //                .frame(maxHeight: .infinity) // 设置对齐方式
 //                .onClick {
 //                    let webUrl = appService.checkLink(itemData.modules.module_author.jump_url)
 //                    appService.openUrl(appUrl: webUrl, webUrl: webUrl)
 //                }
-
-                Text(contentItem.language ?? "🈚")
-                Text("\(contentItem.stargazers_count) stars")
-                    .lineLimit(2)
-                    .padding(.horizontal, 20) // 设置水平方向的内间距
-
                 Spacer()
+                HStack {
+                    Text(contentItem.language ?? "🈚")
+                    Text("🌟\(contentItem.stargazers_count)")
+                        .lineLimit(1)
+                        .padding(.horizontal, 20) // 设置水平方向的内间距
+
+                    Spacer()
+                }
             }
         }
     }
@@ -261,18 +266,24 @@ struct GithubStarsContentView: View {
     var body: some View {
         VStack(alignment: .leading) {
             VStack {
-                Text(contentItem.full_name).font(.title)
+                Text(contentItem.full_name)
+                    .foregroundStyle(.blue)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 //                .frame(maxHeight: .infinity) // 设置对齐方式
 //                .onClick {
 //                    let webUrl = appService.checkLink(itemData.modules.module_author.jump_url)
 //                    appService.openUrl(appUrl: webUrl, webUrl: webUrl)
 //                }
-                Text(contentItem.language ?? "🈚")
-                Text("\(contentItem.stargazers_count) stars")
-                    .lineLimit(2)
-                    .padding(.horizontal, 20) // 设置水平方向的内间距
-
                 Spacer()
+                HStack {
+                    Text(contentItem.language ?? "🈚")
+                    Text("🌟\(contentItem.stargazers_count)")
+                        .lineLimit(1)
+                        .padding(.horizontal, 20) // 设置水平方向的内间距
+
+                    Spacer()
+                }
             }
         }
     }
