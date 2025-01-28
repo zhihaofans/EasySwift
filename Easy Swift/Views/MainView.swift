@@ -42,8 +42,11 @@ struct iosMainView: View {
                     NavigationLink("Swift UI测试", destination: UITestView())
                     NavigationLink("搜索", destination: SearchView())
                     NavigationLink("Github", destination: GithubMainView())
-                    Button(action: {}) {
-                        Text("申请相机权限")
+                    Button(action: {
+                        let resultt=HashUtil().sha1("test")
+                        print(resultt)
+                    }) {
+                        Text("SHA1加密")
                     }
                     .alert(alertTitle, isPresented: $showingAlert) {
                         Button("OK", action: {
