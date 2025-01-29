@@ -28,6 +28,7 @@ struct SearchView: View {
                         Text("百度翻译").tag(SearchType.baidu_translate)
                         Text("DeepL 翻译").tag(SearchType.deepl_translate)
                         Text("Steam游戏").tag(SearchType.steam_game)
+                        Text("Hugging Face").tag(SearchType.huggingface)
                     } label: {
                         Text("类型")
                     }
@@ -88,6 +89,9 @@ struct SearchView: View {
         case .steam_game:
             safariUrlString = "https://store.steampowered.com/search/?term=\(SearchKey)"
             isShowingSafari = true
+        case .huggingface:
+            safariUrlString = "https://huggingface.co/search/full-text?q=\(SearchKey)"
+            isShowingSafari = true
 //        default:
 //            break
         }
@@ -95,7 +99,7 @@ struct SearchView: View {
 }
 
 enum SearchType: String, CaseIterable, Identifiable {
-    case baidu, google, bing, bilibili, github, google_translate, baidu_translate, deepl_translate, steam_game
+    case baidu, google, bing, bilibili, github, google_translate, baidu_translate, deepl_translate, steam_game, huggingface
     var id: Self { self }
 }
 
