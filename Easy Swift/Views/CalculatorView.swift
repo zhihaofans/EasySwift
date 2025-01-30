@@ -19,7 +19,7 @@ struct CalculatorView: View {
                 }
             }
         }
-        .alert(alertTitle, isPresented: $showingAlert) {
+        .alert(self.alertTitle, isPresented: self.$showingAlert) {
             Button("OK", action: {
                 self.alertTitle=""
                 self.alertText=""
@@ -40,14 +40,45 @@ struct CalculatorView: View {
 }
 
 private struct BMICalculatorView: View {
-    @State private var inputHeight: Float=180
-    @State private var inputWeight: Float=80.0
+    @State private var inputHeight: String="1.8" // 身高，米
+    @State private var inputWeight: String="80.0" // 体重，公斤
+    @State private var isShowAlert: Bool=false
+    @State private var alertTitle: String=""
+    @State private var alertMessage: String=""
     var body: some View {
         VStack {
             List {
-                
+                TextField("身高", text: self.$inputHeight).setNumberType()
+                TextField("体重", text: self.$inputWeight)
+                Button(action: {
+                    // TODO: Search
+                    if self.inputHeight.isNotEmpty {
+                        if self.isFloat(self.inputHeight), self.isFloat(self.inputWeight) {
+                        } else {
+                            self.alertTitle="错误"
+                            self.alertMessage="身高、体重不是正确的数字"
+                            self.isShowAlert=true
+                        }
+                    }
+                }) {
+                    Text("计算")
+                }
             }
-        }
+        }.showTextAlert(self.alertTitle, self.alertMessage, isPresented: self.$isShowAlert)
+    }
+
+    func isFloat(_ str: String) -> Bool {
+        print(str)
+        print(Float(str) != nil)
+        return Float(str) != nil
+    }
+}
+
+public extension TextField {
+    func setNumberType() -> some View {
+        return self.keyboardType(.decimalPad) // 设置为小数键盘
+//            .padding()
+//            .textFieldStyle(RoundedBorderTextFieldStyle())
     }
 }
 
