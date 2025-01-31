@@ -45,15 +45,29 @@ private struct BMICalculatorView: View {
     @State private var isShowAlert: Bool=false
     @State private var alertTitle: String=""
     @State private var alertMessage: String=""
+    @State private var result: String=""
     var body: some View {
         VStack {
             List {
-                TextField("身高", text: self.$inputHeight).setNumberType()
-                TextField("体重", text: self.$inputWeight)
+                TextField("身高(m)", text: self.$inputHeight).setNumberType()
+                TextField("体重(kg)", text: self.$inputWeight)
                 Button(action: {
-                    // TODO: Search
                     if self.inputHeight.isNotEmpty {
-                        if self.isFloat(self.inputHeight), self.isFloat(self.inputWeight) {
+                        let height=Float(inputHeight) ?? 1.5
+                        let weight=Float(inputWeight) ?? 0.0
+                        if self.inputHeight.isFloat, self.inputWeight.isFloat, height > 0, weight > 0 {
+                            let bmi=self.roundedDecimal(weight / (height * height), 1)
+                            var resultDec=""
+                            if bmi < 18.5 {
+                                resultDec="过轻"
+                            } else if bmi > 30 {
+                                resultDec="肥胖"
+                            } else if bmi < 30, bmi >= 25 {
+                                resultDec="超重"
+                            } else {
+                                resultDec="正常"
+                            }
+                            self.result="BMI:\(bmi)(\(resultDec))"
                         } else {
                             self.alertTitle="错误"
                             self.alertMessage="身高、体重不是正确的数字"
@@ -63,14 +77,13 @@ private struct BMICalculatorView: View {
                 }) {
                     Text("计算")
                 }
+                Text(self.result)
             }
         }.showTextAlert(self.alertTitle, self.alertMessage, isPresented: self.$isShowAlert)
     }
 
-    func isFloat(_ str: String) -> Bool {
-        print(str)
-        print(Float(str) != nil)
-        return Float(str) != nil
+    func roundedDecimal(_ value: Float, _ decimalPlaces: Int=0) -> Float {
+        return (value * pow(10, Float(decimalPlaces))).rounded() / pow(10, Float(decimalPlaces))
     }
 }
 
