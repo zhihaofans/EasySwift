@@ -7,9 +7,18 @@
 
 import SwiftUI
 
-struct EmptyView: View {
+struct EmptyTextView: View {
+    private let title: String
+    private let text: String
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        Spacer()
+        Text(text).setNavigationTitle(title)
+        Spacer()
+    }
+
+    init(title: String,text: String) {
+        self.title = title
+        self.text = text
     }
 }
 
