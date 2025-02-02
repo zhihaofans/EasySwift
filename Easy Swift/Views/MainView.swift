@@ -31,7 +31,7 @@ struct iosMainView: View {
 //            Text("test")
         // ScanView()
         case 2:
-            MoreView()
+            EmptyTextView(title: "更多", text: "更新中...")
         default:
             NavigationView {
                 List {
@@ -42,6 +42,7 @@ struct iosMainView: View {
                     NavigationLink("Swift UI测试", destination: UITestView())
                     NavigationLink("搜索", destination: SearchView())
                     NavigationLink("Github", destination: GithubMainView())
+                    NavigationLink("TODO", destination: EmptyTextView(title: "TODO", text: "更新中"))
                     Button(action: {
                         let resultt=HashUtil().sha1("test")
                         print(resultt)
@@ -60,11 +61,11 @@ struct iosMainView: View {
                 }
                 .navigationTitle(AppUtil().getAppName())
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
-                            Image(systemName: "person")
-                        }
-                    }
+//                    ToolbarItem(placement: .navigationBarTrailing) {
+//                        NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
+//                            Image(systemName: "person")
+//                        }
+//                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         NavigationLink(destination: SettingView()) {
                             Image(systemName: "gear")
@@ -95,30 +96,6 @@ struct iosMainView: View {
 //                .tag(2)
 //        }
 //        .frame(maxHeight: 50) // 限制最大高度
-    }
-}
-
-private struct MoreView: View {
-    var body: some View {
-        NavigationView {
-            List {
-//                    NavigationLink("工具", destination: ToolView())
-                Text("更新中...")
-            }
-            .navigationTitle("更多")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
-                        Image(systemName: "person")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: SettingView()) {
-                        Image(systemName: "gear")
-                    }
-                }
-            }
-        }
     }
 }
 
