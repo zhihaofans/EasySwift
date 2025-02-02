@@ -31,7 +31,7 @@ struct iosMainView: View {
 //            Text("test")
         // ScanView()
         case 2:
-            EmptyTextView(title: "更多", text: "更新中...")
+            EmptyTextPageView(title: "更多", text: "更新中...")
         default:
             NavigationView {
                 List {
@@ -42,7 +42,7 @@ struct iosMainView: View {
                     NavigationLink("Swift UI测试", destination: UITestView())
                     NavigationLink("搜索", destination: SearchView())
                     NavigationLink("Github", destination: GithubMainView())
-                    NavigationLink("TODO", destination: EmptyTextView(title: "TODO", text: "更新中"))
+                    NavigationLink("TODO", destination: EmptyTextPageView(title: "TODO", text: "更新中"))
                     Button(action: {
                         let resultt=HashUtil().sha1("test")
                         print(resultt)
