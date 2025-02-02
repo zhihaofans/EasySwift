@@ -8,6 +8,19 @@
 import SwiftUI
 
 struct EmptyTextView: View {
+    private let text: String
+    var body: some View {
+        Spacer()
+        Text(text)
+        Spacer()
+    }
+
+    init(text: String) {
+        self.text = text
+    }
+}
+
+struct EmptyTextPageView: View {
     private let title: String
     private let text: String
     var body: some View {
@@ -20,8 +33,4 @@ struct EmptyTextView: View {
         self.title = title
         self.text = text
     }
-}
-
-#Preview {
-    EmptyView()
 }
