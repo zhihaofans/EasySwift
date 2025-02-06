@@ -29,3 +29,22 @@ struct ListItemLoadingView: View {
         }
     }
 }
+
+struct DoubleTextItemView: View {
+    var text: String
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        HStack {
+            VStack {
+                Text(text.removeLeftSpaceAndNewLine())
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Spacer()
+            // Text(text).foregroundColor(.gray)
+        }
+    }
+}
