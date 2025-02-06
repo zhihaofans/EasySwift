@@ -42,7 +42,7 @@ struct iosMainView: View {
                     NavigationLink("Swift UI测试", destination: UITestView())
                     NavigationLink("搜索", destination: SearchView())
                     NavigationLink("Github", destination: GithubMainView())
-                    NavigationLink("TODO", destination: EmptyTextPageView(title: "TODO", text: "更新中"))
+                    NavigationLink("TODO", destination: TodoView())
                     Button(action: {
                         let resultt=HashUtil().sha1("test")
                         print(resultt)

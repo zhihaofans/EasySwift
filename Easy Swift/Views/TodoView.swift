@@ -18,9 +18,9 @@ struct TodoView: View {
 
 struct TodoContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \TodoItemDataModel.create_time, order: .reverse) private var clips: [TodoItemDataModel]
-    @State private var clipList=[TodoItemDataModel]()
-    @State private var clipContentList=[String]()
+    @Query(sort: \TodoItemDataModel.create_time, order: .reverse) private var items: [TodoItemDataModel]
+    @State private var todoList=[TodoItemDataModel]()
+    @State private var todoTitleList=[String]()
     @State private var showingAlert=false
     @State private var showingMenu=false
     @State private var userInput=""
@@ -30,17 +30,17 @@ struct TodoContentView: View {
 
     var body: some View {
         VStack {
-        // 显示所有任务
-            if clips.isEmpty {
-                EmptyTextView(text:"空白的TODO列表")
+            // 显示所有任务
+            if items.isEmpty {
+                EmptyTextView(text: "空白的TODO列表")
             } else {
-                List(clips) { item in
-                    ClipItemView(path: clipList, item: item)
+                List(items) { item in
+                    TodoItemView(path: todoList, item: item)
                         .swipeActions {}
                 }
-                .onChange(of: clips) { _, _ in
-                    print("当前 clipList 数据：\(clipList)")
-                    clipContentList=clips.map { $0.text }
+                .onChange(of: items) { _, _ in
+                    print("当前 clipList 数据：\(todoList)")
+                    todoTitleList=items.map { $0.title }
                 }
             }
         }
@@ -66,9 +66,9 @@ struct TodoContentView: View {
                 title: "请输入内容",
                 placeholder: "在这里输入...",
                 inputText: $userInput,
-                isPresented: $showInputPopup)
-            { inputText in
-                clipContentList=clips.map { $0.text }
+                isPresented: $showInputPopup
+            ) { inputText in
+                todoTitleList=items.map { $0.title }
                 if inputText.isNotEmpty {
                     self.addNewItem(inputText)
                     userInput=""
@@ -96,6 +96,7 @@ struct TodoContentView: View {
             manualFetchTasks()
         }
     }
+
     // 手动查询所有任务
     private func manualFetchTasks() {
         // 使用 modelContext.fetch() 手动查询 Task 实体
@@ -104,8 +105,8 @@ struct TodoContentView: View {
         do {
             let clips=try modelContext.fetch(fetchRequest)
             print("Fetched Clips: " + clips.length.toString)
-            clipContentList=clips.map { $0.text }
-            print("clipContentList: " + clipContentList.length.toString)
+            todoTitleList=clips.map { $0.title }
+            print("clipContentList: " + todoTitleList.length.toString)
 
         } catch {
             print("Failed to fetch clips: \(error)")
@@ -115,26 +116,26 @@ struct TodoContentView: View {
     private func addNewItem(_ title: String) {
         // 1. 确保新任务的标题不是空的
         guard !title.isEmpty else { return }
-        if clips.map { $0.text }.contains(title) {
+        if items.map { $0.title }.contains(title) {
             print("列表已存在该内容")
             return
         }
         let createTime=Date()
         let clipItem=TodoItemDataModel(
-        id: UUID(), 
-        title: title, 
-        desc: "", 
-        url: "", 
-        create_time: createTime, 
-        finish_time: nil, 
-        notification_time: nil,
-        group_id: "", 
-        tags: []
+            id: UUID(),
+            title: title,
+            desc: "",
+            url: "",
+            create_time: createTime,
+            finish_time: nil,
+            notification_time: nil,
+            group_id: "",
+            tags: []
         )
 //        print(clipItem)
         // 3. 使用 modelContext 将新任务插入到数据模型中
         modelContext.insert(clipItem)
-        clipList=[clipItem]
+        todoList=[clipItem]
 //        isNew = false
         // 4. 保存当前上下文的更改，将新任务持久化到存储中
 //        try? modelContext.save()
@@ -157,6 +158,41 @@ struct TodoContentView: View {
     }
 }
 
-#Preview {
-    TodoView()
+private struct TodoItemView: View {
+    private let item: TodoItemDataModel
+    @State private var path=[TodoItemDataModel]()
+    @Environment(\.modelContext) private var modelContext
+    init(path: [TodoItemDataModel], item: TodoItemDataModel) {
+        self.path=path
+        self.item=item
+    }
+
+    var body: some View {
+//        NavigationLink(destination: EditView(path: path, editNoteItem: item)) {
+
+        NavigationLink(destination: EmptyTextView(text: item.title)) {
+            DoubleTextItemView(item.title)
+        }.swipeActions(allowsFullSwipe: false) {
+            // 滑动菜单中的操作按钮
+            Button(role: .destructive) {
+                deleteItem()
+//                isShowRemoveAlert=true
+            } label: {
+                Label("删除", systemImage: "trash")
+            }
+        }
+//        }
+    }
+
+    private func deleteItem() {
+        do {
+            modelContext.delete(item)
+            path=[item]
+            try modelContext.save()
+            print("success to delete context")
+        } catch {
+            print("Failed to delete context: \(error)")
+        }
+        print(modelContext)
+    }
 }

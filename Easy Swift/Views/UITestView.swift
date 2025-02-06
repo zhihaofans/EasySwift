@@ -21,6 +21,7 @@ struct UITestView: View {
                         Text("调用系统分享")
                     }
                     .showShareTextView(textToShare, isPresented: $isShareSheetPresented)
+                    NavigationLink("昨天", destination: DateTextView())
                 }
             }
         }
@@ -37,6 +38,49 @@ struct UITestView: View {
                 }
             }
         }
+    }
+}
+
+struct DateTextView: View {
+    @State private var selectedDate = Date()
+    @State private var resultText = "不是昨天"
+    var body: some View {
+        DatePicker("请选择日期", selection: $selectedDate, displayedComponents: [.date])
+            .datePickerStyle(WheelDatePickerStyle()) // 使用轮盘样式
+            .padding().onChange(of: selectedDate) { _, _ in
+                if isYesterday(nowDate: Date(), date: selectedDate) {
+                    resultText = "昨天"
+                } else {
+                    resultText = "不是昨天"
+                }
+            }
+
+        Text("你选择的日期是: \(selectedDate, formatter: dateFormatter)")
+            .padding()
+
+        Text(resultText)
+            .padding()
+    }
+
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }
+
+    func isYesterday(nowDate: Date, date: Date) -> Bool {
+        let calendar = Calendar.current
+        if calendar.isDate(date, inSameDayAs: nowDate) {
+            return false
+        }
+        let startOfDay1 = calendar.startOfDay(for: nowDate)
+        let startOfDay2 = calendar.startOfDay(for: date)
+        // 如果 date1 是 date2 的前一天
+        let result = calendar.isDate(startOfDay1, inSameDayAs: calendar.date(byAdding: .day, value: 1, to: startOfDay2)!)
+        print(nowDate)
+        print(date)
+        print(result)
+        return result
     }
 }
 
