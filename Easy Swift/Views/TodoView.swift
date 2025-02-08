@@ -39,7 +39,7 @@ struct TodoContentView: View {
                         .swipeActions {}
                 }
                 .onChange(of: items) { _, _ in
-                    print("当前 clipList 数据：\(todoList)")
+                    print("当前 todoList 数据：\(todoList)")
                     todoTitleList=items.map { $0.title }
                 }
             }
@@ -103,13 +103,13 @@ struct TodoContentView: View {
         let fetchRequest=FetchDescriptor<TodoItemDataModel>(sortBy: [SortDescriptor(\.create_time)])
 
         do {
-            let clips=try modelContext.fetch(fetchRequest)
-            print("Fetched Clips: " + clips.length.toString)
-            todoTitleList=clips.map { $0.title }
-            print("clipContentList: " + todoTitleList.length.toString)
+            let todos=try modelContext.fetch(fetchRequest)
+            print("Fetched Clips: " + todos.length.toString)
+            todoTitleList=todos.map { $0.title }
+            print("todoTitleList: " + todoTitleList.length.toString)
 
         } catch {
-            print("Failed to fetch clips: \(error)")
+            print("Failed to fetch todos: \(error)")
         }
     }
 
@@ -121,7 +121,7 @@ struct TodoContentView: View {
             return
         }
         let createTime=Date()
-        let clipItem=TodoItemDataModel(
+        let todoItem=TodoItemDataModel(
             id: UUID(),
             title: title,
             desc: "",
@@ -134,8 +134,8 @@ struct TodoContentView: View {
         )
 //        print(clipItem)
         // 3. 使用 modelContext 将新任务插入到数据模型中
-        modelContext.insert(clipItem)
-        todoList=[clipItem]
+        modelContext.insert(todoItem)
+        todoList=[todoItem]
 //        isNew = false
         // 4. 保存当前上下文的更改，将新任务持久化到存储中
 //        try? modelContext.save()
