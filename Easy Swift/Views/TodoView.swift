@@ -49,7 +49,7 @@ struct TodoContentView: View {
             self.alertText=""
             self.showingAlert=false
         }
-        .setNavigationTitle("剪贴板")
+        .setNavigationTitle("TODO")
         .alert("新增剪贴板", isPresented: $showingMenu) {
             Button("输入", action: {
                 showInputPopup=true

@@ -44,10 +44,14 @@ struct iosMainView: View {
                     NavigationLink("Github", destination: GithubMainView())
                     NavigationLink("TODO", destination: TodoView())
                     Button(action: {
-                        let resultt=HashUtil().sha1("test")
-                        print(resultt)
+                        AuthUtil().authenticate(title: "FaceId或TouchId") { result in
+                            print("authenticate\(result)")
+                        } fail: { err in
+                            print("authenticate error:\(err)")
+                        }
+
                     }) {
-                        Text("SHA1加密")
+                        Text("FaceId")
                     }
                     .alert(alertTitle, isPresented: $showingAlert) {
                         Button("OK", action: {
