@@ -62,6 +62,12 @@ struct iosMainView: View {
                     } message: {
                         Text(alertText)
                     }
+                    Button(action: {
+                        UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
+
+                    }) {
+                        Text("返回桌面")
+                    }
                 }
                 .navigationTitle(AppUtil().getAppName())
                 .toolbar {
