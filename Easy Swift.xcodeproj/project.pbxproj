@@ -14,22 +14,9 @@
 		267CD63D2CF36BCC00126C7D /* Easy Swift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Easy Swift.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		26C1F8EB2E8C3A7A0070CDB7 /* Exceptions for "Easy Swift" folder in "Easy Swift" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Easy-Swift-Info.plist",
-			);
-			target = 267CD63C2CF36BCC00126C7D /* Easy Swift */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		267CD63F2CF36BCC00126C7D /* Easy Swift */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				26C1F8EB2E8C3A7A0070CDB7 /* Exceptions for "Easy Swift" folder in "Easy Swift" target */,
-			);
 			path = "Easy Swift";
 			sourceTree = "<group>";
 		};
@@ -382,7 +369,7 @@
 			repositoryURL = "https://github.com/zhihaofans/SwiftUtils";
 			requirement = {
 				kind = exactVersion;
-				version = 0.0.11;
+				version = "0.0.12-b";
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
