@@ -13,7 +13,7 @@ struct BiliMainView: View {
     @State private var alertTitle: String = "未知错误"
     @State private var alertText: String = "未知错误"
     @State private var qrcodeContent: String = ""
-    @State private var isLogin = false
+    @AppStorage("bilibili_islogin") var isLogin = false
     var body: some View {
         VStack {
 //            Form {
@@ -133,7 +133,7 @@ struct BiliHomeView: View {
 }
 
 struct BiliLoginView: View {
-    @State var isLogin = false
+    @AppStorage("bilibili_islogin") var isLogin = false
     @State private var showingAlert = false
     @State private var alertText: String = "未知错误"
     @State private var loginDataLoaded = false

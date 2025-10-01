@@ -13,7 +13,8 @@ import UIKit
 class BiliAppService {
     @AppStorage("open_web_in_app") private var openWebInApp = false
     func getBiliUrl(_ url: String) -> String {
-        return "bilibili://browser/?url=\(url.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? ""))"
+        // return "bilibili://browser/?url=\(url.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? ""))"
+        return "bilibili://browser/?url=" + url
     }
 
     func openAppUrl(_ urlStr: String) {
