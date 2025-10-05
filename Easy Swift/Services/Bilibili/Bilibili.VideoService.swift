@@ -26,7 +26,7 @@ class BiliVideoService {
             if result.isEmpty {
                 fail("result.isEmpty")
             } else {
-                print(result)
+                // print(result)
                 do {
                     let data = try JSONDecoder().decode(BiliVideoInfoResult.self, from: result.data(using: .utf8)!)
                     debugPrint(data.code)
