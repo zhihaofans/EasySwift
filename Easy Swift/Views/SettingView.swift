@@ -7,7 +7,18 @@
 
 import SwiftUI
 import SwiftUtils
+
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
+
+#if os(iOS)
+typealias PlatformImage = UIImage
+#elseif os(macOS)
+typealias PlatformImage = NSImage
+#endif
 
 struct SettingView: View {
 //    @AppStorage("bili_dynamic_image_mode") var isDynamicShowImage: Bool = true
@@ -79,7 +90,11 @@ struct SettingView: View {
         #endif
     }
 
+    // MARK: - App 图标获取（跨平台）
+
+    // iOS：从 Info.plist 的 CFBundleIcons 中取图标名称
     private func getAppIconName() -> String? {
+        #if os(iOS)
         if let iconsDictionary = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
            let primaryIconsDictionary = iconsDictionary["CFBundlePrimaryIcon"] as? [String: Any],
            let iconFiles = primaryIconsDictionary["CFBundleIconFiles"] as? [String],
@@ -88,35 +103,51 @@ struct SettingView: View {
             return lastIcon
         }
         return nil
+        #else
+        // macOS 不使用名称方式（直接从 NSApplication 取图标）
+        return nil
+        #endif
     }
 
-    private func getAppIconImage() -> UIImage? {
+    // [UPDATED] 返回跨平台图片类型
+    private func getAppIconImage() -> PlatformImage? {
+        #if os(iOS)
         if let iconName = getAppIconName() {
             return UIImage(named: iconName)
         }
         return nil
+        #elseif os(macOS)
+        // macOS：系统级获取当前 App 图标最稳
+        return NSApplication.shared.applicationIconImage
+        #endif
     }
 }
 
 struct AppIconAndNameView: View {
-    let image: UIImage
+    let image: PlatformImage
     var body: some View {
         VStack(alignment: .center) {
-            // Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+            #if os(iOS)
             Image(uiImage: image)
-                .resizable() // 允许图片可调整大小
-                .scaledToFit() // 图片将等比缩放以适应框架
-                .frame(width: 120, height: 120) // 设置视图框架的大小
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous)) // 设置圆角矩形形状
-                .shadow(radius: 5) // 添加阴影以增强效果
-            // .overlay(Circle().stroke(Color.gray, lineWidth: 4)) // 可选的白色边框
-//                .aspectRatio(contentMode: .fit)
-//                .frame(width: 100, height: 100)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .shadow(radius: 5)
+            #elseif os(macOS)
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .shadow(radius: 5)
+            #endif
+
             Text(AppUtil().getAppName())
                 .font(.title)
                 .padding()
         }
-        .frame(maxWidth: .infinity, alignment: .center) // 设置对齐方式
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 }
 
