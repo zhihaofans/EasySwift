@@ -8,6 +8,11 @@
 import SwiftUI
 import SwiftUtils
 
+// 仅在 macOS 使用 AppKit（做系统分享）
+#if os(macOS)
+import AppKit
+#endif
+
 struct UITestView: View {
     @State private var isShareSheetPresented = false
     @State private var textToShare = "这是我要分享的一段文本！"
@@ -20,23 +25,53 @@ struct UITestView: View {
                     }) {
                         Text("调用系统分享")
                     }
+                    // iOS 仍走你现有的分享；macOS 用 NSSharingServicePicker
+                    #if os(iOS)
                     .showShareTextView(textToShare, isPresented: $isShareSheetPresented)
+                    #elseif os(macOS)
+                    .macShareTextView(textToShare, isPresented: $isShareSheetPresented) // 定义见下方
+                    #endif
+
                     NavigationLink("昨天", destination: DateTextView())
                 }
             }
         }
+        // iOS 和 macOS 的导航标题分别适配
+        #if os(iOS)
         .setNavigationTitle(AppUtil().getAppName())
+        #elseif os(macOS)
+        .navigationTitle(AppUtil().getAppName())
+        #endif
         .toolbar {
+            // iOS 的工具栏放右侧导航栏；macOS 用 .automatic
+            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
+                NavigationLink(destination: Text("Hello, World!")) {
                     Image(systemName: "person")
                 }
             }
+            #elseif os(macOS)
+            ToolbarItem(placement: .automatic) {
+                NavigationLink(destination: Text("Hello, World!")) {
+                    Image(systemName: "person")
+                }
+            }
+            #endif
+
+            // 第二个按钮同样分平台放置
+            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink(destination: SettingView()) {
                     Image(systemName: "gear")
                 }
             }
+            #elseif os(macOS)
+            ToolbarItem(placement: .automatic) {
+                NavigationLink(destination: SettingView()) {
+                    Image(systemName: "gear")
+                }
+            }
+            #endif
         }
     }
 }
@@ -46,7 +81,12 @@ struct DateTextView: View {
     @State private var resultText = "不是昨天"
     var body: some View {
         DatePicker("请选择日期", selection: $selectedDate, displayedComponents: [.date])
-            .datePickerStyle(WheelDatePickerStyle()) // 使用轮盘样式
+        // 日期样式：iOS 用轮盘；macOS 用文本域（你也可以换成 .graphical）
+        #if os(iOS)
+            .datePickerStyle(.wheel)
+        #elseif os(macOS)
+            .datePickerStyle(.field)
+        #endif
             .padding().onChange(of: selectedDate) { _, _ in
                 if isYesterday(nowDate: Date(), date: selectedDate) {
                     resultText = "昨天"
@@ -84,6 +124,49 @@ struct DateTextView: View {
     }
 }
 
+// MARK: - macOS 分享：NSSharingServicePicker 封装
+
+#if os(macOS)
+private struct MacSharingPicker: NSViewRepresentable {
+    @Binding var isPresented: Bool
+    var items: [Any]
+
+    func makeNSView(context: Context) -> NSView {
+        NSView(frame: .zero)
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard isPresented else { return }
+        // 在当前 NSView 上弹出系统分享面板
+        let picker = NSSharingServicePicker(items: items)
+        picker.show(relativeTo: nsView.bounds, of: nsView, preferredEdge: .minY)
+        // 弹出后立刻复位绑定值，防止重复弹出
+        DispatchQueue.main.async {
+            self.isPresented = false
+        }
+    }
+}
+
+/// 一个易用的修饰符，和 iOS 的 .showShareTextView 使用体验对齐
+private struct MacShareTextModifier: ViewModifier {
+    let text: String
+    @Binding var isPresented: Bool
+
+    func body(content: Content) -> some View {
+        content.background(
+            MacSharingPicker(isPresented: $isPresented, items: [text])
+                .frame(width: 0, height: 0) // 不占布局
+        )
+    }
+}
+
+extension View {
+    /// 和 iOS 的 `.showShareTextView` 配套的 macOS 版本
+    func macShareTextView(_ text: String, isPresented: Binding<Bool>) -> some View {
+        modifier(MacShareTextModifier(text: text, isPresented: isPresented))
+    }
+}
+#endif
 // #Preview {
 //    UITestView()
 // }
