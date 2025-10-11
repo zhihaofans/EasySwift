@@ -7,7 +7,9 @@
 
 import SwiftUI
 import SwiftUtils
-
+#if os(macOS)
+import AppKit
+#endif
 struct SearchView: View {
     @State private var selectedType: SearchType = .github
     @State private var isShareSheetPresented = false
@@ -46,8 +48,10 @@ struct SearchView: View {
         }
         .setNavigationTitle("Search")
         .toolbar {
+            // [UPDATED macOS] 工具栏分平台放置
+            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
+                NavigationLink(destination: Text("Hello, World!")) {
                     Image(systemName: "person")
                 }
             }
@@ -56,8 +60,22 @@ struct SearchView: View {
                     Image(systemName: "gear")
                 }
             }
+            #elseif os(macOS)
+            ToolbarItem(placement: .automatic) {
+                NavigationLink(destination: Text("Hello, World!")) {
+                    Image(systemName: "person")
+                }
+            }
+            ToolbarItem(placement: .automatic) {
+                NavigationLink(destination: SettingView()) {
+                    Image(systemName: "gear")
+                }
+            }
+            #endif
         }
+        #if os(iOS)
         .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
+        #endif
     }
 
     private func goSearch() {
@@ -95,6 +113,15 @@ struct SearchView: View {
 //        default:
 //            break
         }
+        // [UPDATED macOS] iOS 使用 Safari 预览；macOS 用系统浏览器打开
+        #if os(iOS)
+        safariUrlString = urlString
+        isShowingSafari = true
+        #elseif os(macOS)
+        if let url = URL(string: safariUrlString) {
+            NSWorkspace.shared.open(url)
+        }
+        #endif
     }
 }
 

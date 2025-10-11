@@ -8,6 +8,10 @@
 import SwiftUI
 import SwiftUtils
 
+#if os(macOS) // 仅 macOS 需要 AppKit 打开外部链接
+import AppKit
+#endif
+
 struct GithubMainView: View {
     @State private var selectedTab = 0
     var body: some View {
@@ -27,18 +31,34 @@ struct GithubMainView: View {
             }
             .navigationTitle("Github")
             .toolbar {
+                // 工具栏分平台放置
+                #if os(iOS)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: BiliUserView()) {
-                        // TODO: 这里跳转到个人页面或登录界面
                         Image(systemName: "person")
                     }
                 }
+                #else
+                ToolbarItem(placement: .automatic) {
+                    NavigationLink(destination: BiliUserView()) {
+                        Image(systemName: "person")
+                    }
+                }
+                #endif
                 // TODO: 改成哔哩哔哩设置界面
+//                #if os(iOS)
 //                ToolbarItem(placement: .navigationBarTrailing) {
 //                    NavigationLink(destination: SettingView()) {
 //                        Image(systemName: "gear")
 //                    }
 //                }
+//                #else
+//                ToolbarItem(placement: .automatic) {
+//                    NavigationLink(destination: SettingView()) {
+//                        Image(systemName: "gear")
+//                    }
+//                }
+//                #endif
             }
         }
         TabView(selection: $selectedTab) {
@@ -114,24 +134,37 @@ struct GithubTrendingView: View {
                     ForEach(trendingList, id: \.id) { item in
                         //                        Text(item.name).font(.title)
                         GithubTrendingContentView(item).onClick {
+                            // iOS 走 Safari 预览；macOS 用默认浏览器
+                            #if os(iOS)
                             safariUrlString = item.html_url
                             isShowingSafari = true
+                            #else
+                            if let url = URL(string: item.html_url) {
+                                NSWorkspace.shared.open(url)
+                            }
+                            #endif
                         }
                     }
                 }
             }
+            // 仅在 iOS 上挂载 Safari 预览修饰符，macOS 移除避免链接错误
+            #if os(iOS)
             .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
+            #endif
         }.onAppear {
             self.loadingTrendingData()
         }
         .setNavigationTitle("Github")
         .toolbar {
+            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
-//                NavigationLink(destination: BiliUserView()) {
-                // TODO: 这里跳转到个人页面或登录界面
                 Image(systemName: "gear")
-//                }
             }
+            #else
+            ToolbarItem(placement: .automatic) {
+                Image(systemName: "gear")
+            }
+            #endif
         }
     }
 
@@ -221,7 +254,9 @@ struct GithubStarsView: View {
                         }
                     }
                 }
+                #if os(iOS)
                 .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
+                #endif
             } else {
                 Spacer()
                 Text("请先登录").font(.largeTitle)
@@ -234,12 +269,15 @@ struct GithubStarsView: View {
         }
         .setNavigationTitle(UserName.isEmpty ? "Github Stars" : "\(UserName) 's Stars")
         .toolbar {
+            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
-//                NavigationLink(destination: BiliUserView()) {
-                // TODO: 这里跳转到个人页面或登录界面
                 Image(systemName: "gear")
-//                }
             }
+            #else
+            ToolbarItem(placement: .automatic) {
+                Image(systemName: "gear")
+            }
+            #endif
         }
     }
 

@@ -110,7 +110,7 @@ struct RankItemView: View {
                     let webUrl=appService.checkLink("https://space.bilibili.com/\(itemData.owner.mid)/")
                     appService.openUrl(appUrl: webUrl, webUrl: webUrl)
                 }
-                Text("[\(String(self.itemData.tname!))]")
+                Text("[\(self.itemData.tname ?? "未知分区")]")
                     .lineLimit(1)
                 Text(self.itemData.title)
                     .lineLimit(3)
@@ -131,7 +131,7 @@ struct RankItemView: View {
                 Spacer()
             }
         }
-        .background(Color(.secondarySystemBackground)) // 设置背景色以便观察效果
+        .background(.background)
 //        .frame(height: 150) // 将 VStack 的固定高度设置为100
         .frame(minHeight: 100)
 //        .contentShape(Rectangle()) // 加这行才实现可点击

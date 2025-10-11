@@ -14,12 +14,6 @@ import UIKit
 import AppKit
 #endif
 
-#if os(iOS)
-typealias PlatformImage = UIImage
-#elseif os(macOS)
-typealias PlatformImage = NSImage
-#endif
-
 struct SettingView: View {
 //    @AppStorage("bili_dynamic_image_mode") var isDynamicShowImage: Bool = true
 //    @AppStorage("open_web_in_app") var openWebInApp: Bool = false

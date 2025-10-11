@@ -42,7 +42,7 @@ struct InputAlertView: View {
         }
         .padding()
         .frame(maxWidth: 300)
-        .background(Color(.systemBackground))
+        .background(.background) // 跨平台系统背景色（iOS/macOS 通用）
         .cornerRadius(16)
         .shadow(radius: 10)
     }

@@ -26,17 +26,20 @@ struct GithubMyView: View {
         }
         .navigationTitle("我的Github")
         .toolbar {
-            //                    ToolbarItem(placement: .navigationBarTrailing) {
-            //                        NavigationLink(destination: BiliUserView()) {
-            //                            // TODO: 这里跳转到个人页面或登录界面
-            //                            Image(systemName: "person")
-            //                        }
-            //                    }
+            // 工具栏按钮分平台布局
+            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink(destination: SettingView()) {
                     Image(systemName: "gear")
                 }
             }
+            #elseif os(macOS)
+            ToolbarItem(placement: .automatic) {
+                NavigationLink(destination: SettingView()) {
+                    Image(systemName: "gear")
+                }
+            }
+            #endif
         }
         .onAppear {
             isLogin = LoginService.isLogin()

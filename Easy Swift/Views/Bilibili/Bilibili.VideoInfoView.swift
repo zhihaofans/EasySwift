@@ -40,12 +40,24 @@ struct BiliVideoInfoView: View {
             }
         }
         // TODO: toolbar
-//        .toolbar {
-//            ToolbarItem(placement: .navigationBarTrailing) {
-//                Image(systemName: "trash")
-//            }
-//        }
+        /*
+         .toolbar {
+             #if os(iOS)
+             ToolbarItem(placement: .navigationBarTrailing) {
+                 Image(systemName: "trash")
+             }
+             #elseif os(macOS)
+             ToolbarItem(placement: .automatic) {
+                 Image(systemName: "trash")
+             }
+             #endif
+         }
+         */
+        #if os(iOS)
         .navigationBarTitle(bvid, displayMode: .inline)
+        #else
+        .navigationTitle(bvid)
+        #endif
         .onAppear {
             // TODO: 加载热视频信息
             Task {
@@ -85,8 +97,10 @@ struct BiliVideoInfoItemView: View {
     @State private var alertTitle: String="Error"
     @State private var alertText: String="未知错误"
 
+    #if os(iOS)
     @State private var isShowingSafari=false
     @State private var safariUrlString: String="https://www.apple.com"
+    #endif
     private let appService=BiliAppService()
     init(videoInfo: BiliVideoInfoData) {
         self.videoInfo=videoInfo
@@ -154,9 +168,14 @@ struct BiliVideoInfoItemView: View {
             .background(Color.blue)
             .foregroundColor(.white)
             .cornerRadius(8)
+
+            // 打开网页：iOS 用 Safari 预览；macOS 用默认浏览器
+            #if os(iOS)
             Button(action: {
-                safariUrlString="https://www.bilibili.com/video/\(videoInfo.bvid)/"
-                isShowingSafari=true
+                let urlStr="https://www.bilibili.com/video/\(videoInfo.bvid)/"
+                // 使用项目现有的 Safari 预览修饰符
+                self.safariUrlString=urlStr
+                self.isShowingSafari=true
             }) {
                 Text("打开网页")
             }
@@ -164,6 +183,21 @@ struct BiliVideoInfoItemView: View {
             .background(Color.blue)
             .foregroundColor(.white)
             .cornerRadius(8)
+            #elseif os(macOS)
+            Button(action: {
+                let urlStr="https://www.bilibili.com/video/\(videoInfo.bvid)/"
+                if let url=URL(string: urlStr) {
+                    NSWorkspace.shared.open(url)
+                }
+            }) {
+                Text("打开网页")
+            }
+            .padding()
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .cornerRadius(8)
+            #endif
+
             Button(action: {
                 BiliHistoryService().addLaterToWatch(bvid: videoInfo.bvid) { result in
                     print(result)
@@ -193,7 +227,10 @@ struct BiliVideoInfoItemView: View {
                 Text(alertText)
             }
         }
+        // 仅 iOS 挂载 Safari 预览修饰符；macOS 无此修饰符
+        #if os(iOS)
         .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
+        #endif
     }
 }
 

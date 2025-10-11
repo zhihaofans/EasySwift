@@ -9,6 +9,14 @@ import SwiftData
 import SwiftUI
 import SwiftUtils
 
+// 跨平台导入：iOS 用 UIKit，macOS 用 AppKit（为剪贴板等 API）
+#if canImport(UIKit)
+import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
+
 struct TodoView: View {
     var body: some View {
         TodoContentView()
@@ -76,10 +84,9 @@ struct TodoContentView: View {
             }
         }
         .toolbar {
+            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showingMenu=true
-                }) {
+                Button(action: { showingMenu=true }) {
                     Image(systemName: "plus")
                 }
             }
@@ -90,6 +97,20 @@ struct TodoContentView: View {
                     Image(systemName: "gear")
                 }
             }
+            #else
+            ToolbarItem(placement: .automatic) {
+                Button(action: { showingMenu=true }) {
+                    Image(systemName: "plus")
+                }
+            }
+            ToolbarItem(placement: .automatic) {
+                Button(action: {
+                    // TODO: 剪切板设置（macOS）
+                }) {
+                    Image(systemName: "gear")
+                }
+            }
+            #endif
         }
         .onAppear {
             print("onAppear")
@@ -150,11 +171,19 @@ struct TodoContentView: View {
     }
 
     private func addFromClip() {
+        #if os(iOS)
         if let clipboardContent=UIPasteboard.general.string {
             addNewItem(clipboardContent)
         } else {
             print("剪贴板内容为空或无法转换为字符串")
         }
+        #elseif os(macOS)
+        if let clipboardContent=NSPasteboard.general.string(forType: .string) {
+            addNewItem(clipboardContent)
+        } else {
+            print("剪贴板内容为空或无法转换为字符串")
+        }
+        #endif
     }
 }
 
