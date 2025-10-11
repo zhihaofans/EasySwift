@@ -115,7 +115,6 @@ struct SearchView: View {
         }
         // [UPDATED macOS] iOS 使用 Safari 预览；macOS 用系统浏览器打开
         #if os(iOS)
-        safariUrlString = urlString
         isShowingSafari = true
         #elseif os(macOS)
         if let url = URL(string: safariUrlString) {
