@@ -21,11 +21,16 @@ struct BiliHistoryView: View {
                     LazyVStack {
                         ForEach(historyList, id: \.history.oid) { item in
                             if item.history.business == "archive" {
-                                NavigationLink {
-                                     BiliVideoInfoView(bvid: item.history.bvid!)
-                                } label: {
-                                    BiliHistoryItemView(itemData: item)
-                                }
+                                // 避免强制解包引起崩溃（可选优化；功能不变）
+                                                             if let bvid = item.history.bvid {
+                                                                 NavigationLink {
+                                                                     BiliVideoInfoView(bvid: bvid)
+                                                                 } label: {
+                                                                     BiliHistoryItemView(itemData: item)
+                                                                 }
+                                                             } else {
+                                                                 BiliHistoryItemView(itemData: item)
+                                                             }
                             } else {
                                 BiliHistoryItemView(itemData: item)
                             }
@@ -34,14 +39,21 @@ struct BiliHistoryView: View {
                 }
             } else {
                 Text("Loading...")
+                ProgressView()
             }
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Image(systemName: "trash")
-            }
+#if os(iOS)
+          ToolbarItem(placement: .navigationBarTrailing) {
+              Image(systemName: "trash")
+          }
+          #else
+          ToolbarItem(placement: .automatic) {
+              Image(systemName: "trash")
+          }
+          #endif
         }
-        .navigationTitle("历史记录")
+        .setNavigationTitle("历史记录")
         .onAppear {
             // TODO: 加载历史数据
             Task {

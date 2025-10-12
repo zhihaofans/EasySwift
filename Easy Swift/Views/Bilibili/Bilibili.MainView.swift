@@ -7,7 +7,9 @@
 
 import SwiftUI
 import SwiftUtils
-
+#if os(macOS)
+import AppKit
+#endif
 struct BiliMainView: View {
     @State private var showingAlert = false
     @State private var alertTitle: String = "未知错误"
@@ -31,11 +33,15 @@ struct BiliMainView: View {
             } else {
 //                Text("未登录").font(.largeTitle)
                 BiliLoginView(isLogin: isLogin).toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {}) {
-                            Text("设置")
-                        }
-                    }
+                      #if os(iOS)
+                      ToolbarItem(placement: .navigationBarTrailing) {
+                          Button(action: {}) { Text("设置") }
+                      }
+                      #else
+                      ToolbarItem(placement: .automatic) {
+                          Button(action: {}) { Text("设置") }
+                      }
+                      #endif
                 }
             }
         }
@@ -75,11 +81,19 @@ struct BiliHomeView: View {
 //                            Image(systemName: "person")
 //                        }
 //                    }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: SettingView()) {
-                        Image(systemName: "gear")
-                    }
-                }
+#if os(iOS)
+               ToolbarItem(placement: .navigationBarTrailing) {
+                   NavigationLink(destination: SettingView()) {
+                       Image(systemName: "gear")
+                   }
+               }
+               #else
+               ToolbarItem(placement: .automatic) {
+                   NavigationLink(destination: SettingView()) {
+                       Image(systemName: "gear")
+                   }
+               }
+               #endif
             }
 
         default:
@@ -93,18 +107,35 @@ struct BiliHomeView: View {
             }
             .navigationTitle("哔了个哩")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: BiliUserView()) {
-                        // TODO: 这里跳转到个人页面或登录界面
-                        Image(systemName: "person")
-                    }
-                }
-                // TODO: 改成哔哩哔哩设置界面
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    NavigationLink(destination: SettingView()) {
-//                        Image(systemName: "gear")
-//                    }
-//                }
+#if os(iOS)
+           ToolbarItem(placement: .navigationBarTrailing) {
+               NavigationLink(destination: BiliUserView()) {
+                   Image(systemName: "person")
+               }
+           }
+           #else
+           ToolbarItem(placement: .automatic) {
+               NavigationLink(destination: BiliUserView()) {
+                   Image(systemName: "person")
+               }
+           }
+           #endif
+                // 如果未来需要齿轮按钮，可按同样方式分平台放置
+                             /*
+                             #if os(iOS)
+                             ToolbarItem(placement: .navigationBarTrailing) {
+                                 NavigationLink(destination: SettingView()) {
+                                     Image(systemName: "gear")
+                                 }
+                             }
+                             #else
+                             ToolbarItem(placement: .automatic) {
+                                 NavigationLink(destination: SettingView()) {
+                                     Image(systemName: "gear")
+                                 }
+                             }
+                             #endif
+                             */
             }
         }
         TabView(selection: $selectedTab) {
@@ -159,7 +190,19 @@ struct BiliLoginView: View {
                     Text("请安装APP")
 
                 } else {
-                    Image(uiImage: qrImage!).resizable().frame(width: 200, height: 200)
+#if os(iOS)
+                if let ui = qrImage {
+                    Image(uiImage: ui)
+                        .resizable()
+                        .frame(width: 200, height: 200)
+                }
+                #else
+                if let ns = qrImage {
+                    Image(nsImage: ns)
+                        .resizable()
+                        .frame(width: 200, height: 200)
+                }
+                #endif
                 }
                 Button(action: {
                     Task {
@@ -248,17 +291,29 @@ struct BiliLoginedMainView: View {
             }
             .navigationTitle(AppUtil().getAppName() /* "哔了个哩" */ )
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: Text("Text")) {
-                        // TODO: 这里跳转到个人页面或登录界面
-                        Image(systemName: "person")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: SettingView()) {
-                        Image(systemName: "gear")
-                    }
-                }
+#if os(iOS)
+           ToolbarItem(placement: .navigationBarTrailing) {
+               NavigationLink(destination: Text("Text")) {
+                   Image(systemName: "person")
+               }
+           }
+           ToolbarItem(placement: .navigationBarTrailing) {
+               NavigationLink(destination: SettingView()) {
+                   Image(systemName: "gear")
+               }
+           }
+           #else
+           ToolbarItem(placement: .automatic) {
+               NavigationLink(destination: Text("Text")) {
+                   Image(systemName: "person")
+               }
+           }
+           ToolbarItem(placement: .automatic) {
+               NavigationLink(destination: SettingView()) {
+                   Image(systemName: "gear")
+               }
+           }
+           #endif
             }
         }
     }

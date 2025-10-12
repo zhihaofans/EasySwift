@@ -21,7 +21,7 @@ struct BiliDynamicView: View {
     @State private var isLoadingMore=false
     @State private var reachedEnd=false
 
-    private let service=BiliDynamicService() // [UPDATED] 固定持有，避免请求过程中被释放
+    private let service=BiliDynamicService() // 固定持有，避免请求过程中被释放
     private let dynamicType=BiliDynamicType()
 
     var body: some View {
@@ -57,10 +57,10 @@ struct BiliDynamicView: View {
                 ProgressView()
             }
         }
-        .navigationBarTitle("动态", displayMode: .inline)
+        .setNavigationTitle("动态")
         // [V2] .task：首次进入加载第一页（取代老版 onAppear）
         .task {
-            // [UPDATED] 使用 async/await 首次加载第一页，取代旧的回调写法
+            // 使用 async/await 首次加载第一页，取代旧的回调写法
             if !loaded {
                 await loadFirstPage()
             }
@@ -384,7 +384,7 @@ struct DynamicItemImageView: View {
                 Spacer()
             }
         }
-        .background(Color(.secondarySystemBackground)) // 设置背景色以便观察效果
+        .background(.background)
 //        .frame(height: 150) // 将 VStack 的固定高度设置为100
         .frame(minHeight: 100)
         // TODO: 重写动态点击事件

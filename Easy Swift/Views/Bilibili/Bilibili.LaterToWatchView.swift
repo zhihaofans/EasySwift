@@ -30,14 +30,22 @@ struct BiliLaterToWatchView: View {
                 }
             } else {
                 Text("Loading...")
+                ProgressView()
             }
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Image(systemName: "trash")
-            }
+           
+#if os(iOS)
+ToolbarItem(placement: .navigationBarTrailing) {
+    Image(systemName: "trash")
+}
+#else
+ToolbarItem(placement: .automatic) {
+    Image(systemName: "trash")
+}
+#endif
         }
-        .navigationTitle("稍后再看")
+        .setNavigationTitle("稍后再看")
         .onAppear {
             // TODO: 加载历史数据
             Task {
