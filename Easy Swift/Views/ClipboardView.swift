@@ -87,19 +87,11 @@ struct ClipboardContentView: View {
         } message: {
             Text("输入还是从系统剪贴板导入")
         }
-        .sheet(isPresented: $showInputPopup) {
-            InputAlertView(
-                title: "请输入内容",
-                placeholder: "在这里输入...",
-                inputText: $userInput,
-                isPresented: $showInputPopup)
-            { inputText in
-                clipContentList=clips.map { $0.text }
-                if inputText.isNotEmpty {
-                    self.addNewItem(inputText)
-                    userInput=""
-                }
-            }
+        .inputAlert("新增剪贴板",
+                    placeholder: "请输入内容",
+                    text: $userInput,
+                    isPresented: $showInputPopup) { text in
+            addNewItem(text)
         }
         .toolbar {
        
