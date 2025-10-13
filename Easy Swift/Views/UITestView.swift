@@ -160,12 +160,6 @@ private struct MacShareTextModifier: ViewModifier {
     }
 }
 
-extension View {
-    /// 和 iOS 的 `.showShareTextView` 配套的 macOS 版本
-    func macShareTextView(_ text: String, isPresented: Binding<Bool>) -> some View {
-        modifier(MacShareTextModifier(text: text, isPresented: isPresented))
-    }
-}
 #endif
 // #Preview {
 //    UITestView()

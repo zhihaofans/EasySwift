@@ -8,7 +8,9 @@
 import SwiftData
 import SwiftUI
 import SwiftUtils
-
+#if os(macOS) // 仅 macOS 需要 AppKit（剪贴板 & 分享）
+import AppKit
+#endif
 struct ClipboardView: View {
     var body: some View {
         ClipboardContentView()
@@ -55,7 +57,14 @@ struct ClipboardContentView: View {
                     ClipItemView(path: clipList, item: item)
                         .swipeActions {}
                 }.onChange(of: clips) { _, _ in
-                    print("当前剪贴板内容：\(UIPasteboard.general.string ?? "空")")
+                    
+                    // [UPDATED macOS] 跨平台打印系统剪贴板
+                    #if os(iOS)
+                    let clipStr = UIPasteboard.general.string ?? "空"
+                    #else
+                    let clipStr = NSPasteboard.general.string(forType: .string) ?? "空"
+                    #endif
+                    print("当前剪贴板内容：\(clipStr)")
                     print("当前 clipList 数据：\(clipList)")
                     clipContentList=clips.map { $0.text }
                 }
@@ -93,20 +102,26 @@ struct ClipboardContentView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showingMenu=true
-                }) {
-                    Image(systemName: "plus")
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    // TODO: 剪切板设置
-                }) {
-                    Image(systemName: "gear")
-                }
-            }
+       
+#if os(iOS)
+ToolbarItem(placement: .navigationBarTrailing) {
+    Button(action: { showingMenu = true }) { Image(systemName: "plus") }
+}
+ToolbarItem(placement: .navigationBarTrailing) {
+    Button(action: {
+        // TODO: 剪切板设置（iOS）
+    }) { Image(systemName: "gear") }
+}
+#else
+ToolbarItem(placement: .automatic) {
+    Button(action: { showingMenu = true }) { Image(systemName: "plus") }
+}
+ToolbarItem(placement: .automatic) {
+    Button(action: {
+        // TODO: 剪切板设置（macOS）
+    }) { Image(systemName: "gear") }
+}
+#endif
         }.onAppear {
             print("onAppear")
             manualFetchTasks()
@@ -159,11 +174,19 @@ struct ClipboardContentView: View {
     }
 
     private func addFromClip() {
-        if let clipboardContent=UIPasteboard.general.string {
-            addNewItem(clipboardContent)
-        } else {
-            print("剪贴板内容为空或无法转换为字符串")
-        }
+#if os(iOS)
+       if let clipboardContent = UIPasteboard.general.string {
+           addNewItem(clipboardContent)
+       } else {
+           print("剪贴板内容为空或无法转换为字符串")
+       }
+       #else
+       if let clipboardContent = NSPasteboard.general.string(forType: .string) {
+           addNewItem(clipboardContent)
+       } else {
+           print("剪贴板内容为空或无法转换为字符串")
+       }
+       #endif
     }
 }
 
@@ -206,79 +229,100 @@ private struct ClipItemView: View {
     }
 }
 
-
-
+// MARK: - 编辑页（系统自带样式）
 private struct ClipboardEditorView: View {
     private let item: ClipItemDataModel
-    @State private var path=[ClipItemDataModel]()
+    @State private var path = [ClipItemDataModel]()
     @State private var clipContent: String
+
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.presentationMode) var presentationMode
-    @State private var isShareSheetPresented=false
-    init(path: [ClipItemDataModel], item: ClipItemDataModel?=nil) {
-        let nowTime=DateUtil().getTimestamp()
-        self.path=path
-        self.item=item ?? ClipItemDataModel(id: UUID(), text: "", create_time: nowTime, update_time: nowTime)
-        self.clipContent=self.item.text
+    @Environment(\.dismiss) private var dismiss
+
+    init(path: [ClipItemDataModel], item: ClipItemDataModel? = nil) {
+        let nowTime = DateUtil().getTimestamp()
+        self.path = path
+        self.item = item ?? ClipItemDataModel(
+            id: UUID(),
+            text: "",
+            create_time: nowTime,
+            update_time: nowTime
+        )
+        _clipContent = State(initialValue: self.item.text)
     }
 
     var body: some View {
-        VStack {
-            TextEditor(text: $clipContent)
+        Form {
+            Section("内容") {
+                TextEditor(text: $clipContent)
+                    .frame(minHeight: 200)
+                    .textSelection(.enabled)
+                    .disableAutocorrection(true)
+            }
+
+            Section("统计") {
+                LabeledContent("字数", value: "\(clipContent.count)")
+                LabeledContent("行数", value: "\(clipContent.split(whereSeparator: \.isNewline).count)")
+            }
         }
-        .onDisappear {
-            print("退出编辑界面")
-            print(clipContent)
-            self.saveText()
-        }
-//        .setNavigationTitle("编辑")
+        .formStyle(.grouped)
         .setNavigationTitle(clipContent.count.toString)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    // 添加标题
-                    Text("动作插件")
-                        .font(.headline)
-                        .foregroundColor(.gray)
+            #if os(iOS)
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                // 系统分享
+                ShareLink(item: clipContent) { Image(systemName: "square.and.arrow.up") }
+                // 系统粘贴
+                PasteButton(payloadType: String.self) { items in
+                    clipContent += items.joined(separator: "\n")
+                }
+                // 复制（用平台 API 实现，替代不可用的 CopyButton）
+                Button {
+                    copyToClipboard()
+                } label: { Image(systemName: "doc.on.doc") }
+            }
+            #else
+            ToolbarItemGroup(placement: .automatic) {
+                ShareLink(item: clipContent) { Image(systemName: "square.and.arrow.up") }
+                PasteButton(payloadType: String.self) { items in
+                    clipContent += items.joined(separator: "\n")
+                }
+                Button {
+                    copyToClipboard()
+                } label: { Image(systemName: "doc.on.doc") }
+            }
+            #endif
 
-                    Divider() // 分隔线
-                    Button(action: {
-                        isShareSheetPresented=true
-                    }) {
-                        Label("分享", systemImage: "square.and.arrow.up")
-                    }
-                    Button("分词") {
-                        print("选项 2 被点击")
-                    }.disabled(true)
-                    Button("复制") {
-                        print("选项 2 被点击")
-                    }.disabled(true)
-                } label: {
-                    Label("菜单", systemImage: "square.grid.2x2")
+            ToolbarItem(placement: .cancellationAction) {
+                Button("完成") {
+                    saveText()
+                    dismiss()
                 }
             }
         }
-        .showShareTextView(clipContent, isPresented: $isShareSheetPresented)
+        .onDisappear { saveText() }
     }
 
-    func saveText() {
-        item.text=clipContent
-        item.update_time=DateUtil().getTimestamp()
-//        print(item)
+    // MARK: 保存文本
+    private func saveText() {
+        guard clipContent != item.text else { return }
+        item.text = clipContent
+        item.update_time = DateUtil().getTimestamp()
         modelContext.insert(item)
-        path=[item]
-        //        isNew = false
-        // 4. 保存当前上下文的更改，将新任务持久化到存储中
-        //        try? modelContext.save()
-        do {
-            try modelContext.save()
-        } catch {
-            print("Failed to save context: \(error)")
-        }
-        print(modelContext)
+        path = [item]
+        do { try modelContext.save() }
+        catch { print("Failed to save context: \(error)") }
+    }
+
+    // MARK: 复制到系统剪贴板（iOS/macOS）
+    private func copyToClipboard() {
+        #if os(iOS)
+        UIPasteboard.general.string = clipContent
+        #else
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(clipContent, forType: .string)
+        #endif
     }
 }
-
 // #Preview {
 //    ClipboardView()
 // }
