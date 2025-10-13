@@ -34,16 +34,15 @@ struct BiliLaterToWatchView: View {
             }
         }
         .toolbar {
-           
-#if os(iOS)
-ToolbarItem(placement: .navigationBarTrailing) {
-    Image(systemName: "trash")
-}
-#else
-ToolbarItem(placement: .automatic) {
-    Image(systemName: "trash")
-}
-#endif
+            #if os(iOS)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Image(systemName: "trash")
+            }
+            #else
+            ToolbarItem(placement: .automatic) {
+                Image(systemName: "trash")
+            }
+            #endif
         }
         .setNavigationTitle("稍后再看")
         .onAppear {

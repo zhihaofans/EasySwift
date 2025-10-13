@@ -63,9 +63,9 @@ struct iosMainView: View {
                         Text(alertText)
                     }
                     Button(action: {
-#if canImport(UIKit)
+                        #if canImport(UIKit)
                         UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
-#endif
+                        #endif
                     }) {
                         Text("返回桌面")
                     }
@@ -115,10 +115,10 @@ struct iosMainView: View {
 import AppKit
 
 struct MacMainView: View {
-    @State private var selectedTab = 0
-    @State private var showingAlert = false
-    @State private var alertTitle: String = "未知错误"
-    @State private var alertText: String = "未知错误"
+    @State private var selectedTab=0
+    @State private var showingAlert=false
+    @State private var alertTitle: String="未知错误"
+    @State private var alertText: String="未知错误"
 
     var body: some View {
         switch selectedTab {

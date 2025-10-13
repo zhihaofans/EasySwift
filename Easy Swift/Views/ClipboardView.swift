@@ -57,12 +57,11 @@ struct ClipboardContentView: View {
                     ClipItemView(path: clipList, item: item)
                         .swipeActions {}
                 }.onChange(of: clips) { _, _ in
-                    
                     // [UPDATED macOS] 跨平台打印系统剪贴板
                     #if os(iOS)
-                    let clipStr = UIPasteboard.general.string ?? "空"
+                    let clipStr=UIPasteboard.general.string ?? "空"
                     #else
-                    let clipStr = NSPasteboard.general.string(forType: .string) ?? "空"
+                    let clipStr=NSPasteboard.general.string(forType: .string) ?? "空"
                     #endif
                     print("当前剪贴板内容：\(clipStr)")
                     print("当前 clipList 数据：\(clipList)")
@@ -90,30 +89,30 @@ struct ClipboardContentView: View {
         .inputAlert("新增剪贴板",
                     placeholder: "请输入内容",
                     text: $userInput,
-                    isPresented: $showInputPopup) { text in
+                    isPresented: $showInputPopup)
+        { text in
             addNewItem(text)
         }
         .toolbar {
-       
-#if os(iOS)
-ToolbarItem(placement: .navigationBarTrailing) {
-    Button(action: { showingMenu = true }) { Image(systemName: "plus") }
-}
-ToolbarItem(placement: .navigationBarTrailing) {
-    Button(action: {
-        // TODO: 剪切板设置（iOS）
-    }) { Image(systemName: "gear") }
-}
-#else
-ToolbarItem(placement: .automatic) {
-    Button(action: { showingMenu = true }) { Image(systemName: "plus") }
-}
-ToolbarItem(placement: .automatic) {
-    Button(action: {
-        // TODO: 剪切板设置（macOS）
-    }) { Image(systemName: "gear") }
-}
-#endif
+            #if os(iOS)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showingMenu=true }) { Image(systemName: "plus") }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    // TODO: 剪切板设置（iOS）
+                }) { Image(systemName: "gear") }
+            }
+            #else
+            ToolbarItem(placement: .automatic) {
+                Button(action: { showingMenu=true }) { Image(systemName: "plus") }
+            }
+            ToolbarItem(placement: .automatic) {
+                Button(action: {
+                    // TODO: 剪切板设置（macOS）
+                }) { Image(systemName: "gear") }
+            }
+            #endif
         }.onAppear {
             print("onAppear")
             manualFetchTasks()
@@ -166,19 +165,19 @@ ToolbarItem(placement: .automatic) {
     }
 
     private func addFromClip() {
-#if os(iOS)
-       if let clipboardContent = UIPasteboard.general.string {
-           addNewItem(clipboardContent)
-       } else {
-           print("剪贴板内容为空或无法转换为字符串")
-       }
-       #else
-       if let clipboardContent = NSPasteboard.general.string(forType: .string) {
-           addNewItem(clipboardContent)
-       } else {
-           print("剪贴板内容为空或无法转换为字符串")
-       }
-       #endif
+        #if os(iOS)
+        if let clipboardContent=UIPasteboard.general.string {
+            addNewItem(clipboardContent)
+        } else {
+            print("剪贴板内容为空或无法转换为字符串")
+        }
+        #else
+        if let clipboardContent=NSPasteboard.general.string(forType: .string) {
+            addNewItem(clipboardContent)
+        } else {
+            print("剪贴板内容为空或无法转换为字符串")
+        }
+        #endif
     }
 }
 
@@ -222,24 +221,25 @@ private struct ClipItemView: View {
 }
 
 // MARK: - 编辑页（系统自带样式）
+
 private struct ClipboardEditorView: View {
     private let item: ClipItemDataModel
-    @State private var path = [ClipItemDataModel]()
+    @State private var path=[ClipItemDataModel]()
     @State private var clipContent: String
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    init(path: [ClipItemDataModel], item: ClipItemDataModel? = nil) {
-        let nowTime = DateUtil().getTimestamp()
-        self.path = path
-        self.item = item ?? ClipItemDataModel(
+    init(path: [ClipItemDataModel], item: ClipItemDataModel?=nil) {
+        let nowTime=DateUtil().getTimestamp()
+        self.path=path
+        self.item=item ?? ClipItemDataModel(
             id: UUID(),
             text: "",
             create_time: nowTime,
             update_time: nowTime
         )
-        _clipContent = State(initialValue: self.item.text)
+        _clipContent=State(initialValue: self.item.text)
     }
 
     var body: some View {
@@ -295,26 +295,29 @@ private struct ClipboardEditorView: View {
     }
 
     // MARK: 保存文本
+
     private func saveText() {
         guard clipContent != item.text else { return }
-        item.text = clipContent
-        item.update_time = DateUtil().getTimestamp()
+        item.text=clipContent
+        item.update_time=DateUtil().getTimestamp()
         modelContext.insert(item)
-        path = [item]
+        path=[item]
         do { try modelContext.save() }
         catch { print("Failed to save context: \(error)") }
     }
 
     // MARK: 复制到系统剪贴板（iOS/macOS）
+
     private func copyToClipboard() {
         #if os(iOS)
-        UIPasteboard.general.string = clipContent
+        UIPasteboard.general.string=clipContent
         #else
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(clipContent, forType: .string)
         #endif
     }
 }
+
 // #Preview {
 //    ClipboardView()
 // }

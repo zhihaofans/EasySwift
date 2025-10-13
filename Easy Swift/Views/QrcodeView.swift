@@ -10,8 +10,6 @@ import CoreImage.CIFilterBuiltins
 import SwiftUI
 import SwiftUtils
 
-
-
 struct QrcodeView: View {
     @State private var showingAlert=false
     @State private var alertTitle: String="未知错误"

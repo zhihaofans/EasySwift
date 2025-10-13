@@ -6,8 +6,8 @@
 //
 
 #if os(macOS)
-import SwiftUI
 import AppKit
+import SwiftUI
 
 private struct MacSharingPicker: NSViewRepresentable {
     @Binding var isPresented: Bool
@@ -36,11 +36,12 @@ private struct MacShareTextModifier: ViewModifier {
 public extension View {
     /// 与 iOS 的 `.showShareTextView` 对齐的 macOS 版本（全局仅此一处定义）
     func macShareTextView(_ text: String, isPresented: Binding<Bool>) -> some View {
-        self.modifier(MacShareTextModifier(text: text, isPresented: isPresented))
+        modifier(MacShareTextModifier(text: text, isPresented: isPresented))
     }
+
     /// 让 macOS 也支持同名 API：.showShareTextView(...)
-       func showShareTextView(_ text: String, isPresented: Binding<Bool>) -> some View {
-           self.modifier(MacShareTextModifier(text: text, isPresented: isPresented))
-       }
+    func showShareTextView(_ text: String, isPresented: Binding<Bool>) -> some View {
+        modifier(MacShareTextModifier(text: text, isPresented: isPresented))
+    }
 }
 #endif

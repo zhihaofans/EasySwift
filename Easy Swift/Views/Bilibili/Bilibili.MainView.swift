@@ -33,15 +33,15 @@ struct BiliMainView: View {
             } else {
 //                Text("未登录").font(.largeTitle)
                 BiliLoginView(isLogin: isLogin).toolbar {
-                      #if os(iOS)
-                      ToolbarItem(placement: .navigationBarTrailing) {
-                          Button(action: {}) { Text("设置") }
-                      }
-                      #else
-                      ToolbarItem(placement: .automatic) {
-                          Button(action: {}) { Text("设置") }
-                      }
-                      #endif
+#if os(iOS)
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {}) { Text("设置") }
+                    }
+#else
+                    ToolbarItem(placement: .automatic) {
+                        Button(action: {}) { Text("设置") }
+                    }
+#endif
                 }
             }
         }
@@ -82,18 +82,18 @@ struct BiliHomeView: View {
 //                        }
 //                    }
 #if os(iOS)
-               ToolbarItem(placement: .navigationBarTrailing) {
-                   NavigationLink(destination: SettingView()) {
-                       Image(systemName: "gear")
-                   }
-               }
-               #else
-               ToolbarItem(placement: .automatic) {
-                   NavigationLink(destination: SettingView()) {
-                       Image(systemName: "gear")
-                   }
-               }
-               #endif
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SettingView()) {
+                        Image(systemName: "gear")
+                    }
+                }
+#else
+                ToolbarItem(placement: .automatic) {
+                    NavigationLink(destination: SettingView()) {
+                        Image(systemName: "gear")
+                    }
+                }
+#endif
             }
 
         default:
@@ -108,34 +108,34 @@ struct BiliHomeView: View {
             .navigationTitle("哔了个哩")
             .toolbar {
 #if os(iOS)
-           ToolbarItem(placement: .navigationBarTrailing) {
-               NavigationLink(destination: BiliUserView()) {
-                   Image(systemName: "person")
-               }
-           }
-           #else
-           ToolbarItem(placement: .automatic) {
-               NavigationLink(destination: BiliUserView()) {
-                   Image(systemName: "person")
-               }
-           }
-           #endif
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: BiliUserView()) {
+                        Image(systemName: "person")
+                    }
+                }
+#else
+                ToolbarItem(placement: .automatic) {
+                    NavigationLink(destination: BiliUserView()) {
+                        Image(systemName: "person")
+                    }
+                }
+#endif
                 // 如果未来需要齿轮按钮，可按同样方式分平台放置
-                             /*
-                             #if os(iOS)
-                             ToolbarItem(placement: .navigationBarTrailing) {
-                                 NavigationLink(destination: SettingView()) {
-                                     Image(systemName: "gear")
-                                 }
-                             }
-                             #else
-                             ToolbarItem(placement: .automatic) {
-                                 NavigationLink(destination: SettingView()) {
-                                     Image(systemName: "gear")
-                                 }
-                             }
-                             #endif
-                             */
+                /*
+                 #if os(iOS)
+                 ToolbarItem(placement: .navigationBarTrailing) {
+                     NavigationLink(destination: SettingView()) {
+                         Image(systemName: "gear")
+                     }
+                 }
+                 #else
+                 ToolbarItem(placement: .automatic) {
+                     NavigationLink(destination: SettingView()) {
+                         Image(systemName: "gear")
+                     }
+                 }
+                 #endif
+                 */
             }
         }
         TabView(selection: $selectedTab) {
@@ -191,18 +191,18 @@ struct BiliLoginView: View {
 
                 } else {
 #if os(iOS)
-                if let ui = qrImage {
-                    Image(uiImage: ui)
-                        .resizable()
-                        .frame(width: 200, height: 200)
-                }
-                #else
-                if let ns = qrImage {
-                    Image(nsImage: ns)
-                        .resizable()
-                        .frame(width: 200, height: 200)
-                }
-                #endif
+                    if let ui = qrImage {
+                        Image(uiImage: ui)
+                            .resizable()
+                            .frame(width: 200, height: 200)
+                    }
+#else
+                    if let ns = qrImage {
+                        Image(nsImage: ns)
+                            .resizable()
+                            .frame(width: 200, height: 200)
+                    }
+#endif
                 }
                 Button(action: {
                     Task {
@@ -292,28 +292,28 @@ struct BiliLoginedMainView: View {
             .navigationTitle(AppUtil().getAppName() /* "哔了个哩" */ )
             .toolbar {
 #if os(iOS)
-           ToolbarItem(placement: .navigationBarTrailing) {
-               NavigationLink(destination: Text("Text")) {
-                   Image(systemName: "person")
-               }
-           }
-           ToolbarItem(placement: .navigationBarTrailing) {
-               NavigationLink(destination: SettingView()) {
-                   Image(systemName: "gear")
-               }
-           }
-           #else
-           ToolbarItem(placement: .automatic) {
-               NavigationLink(destination: Text("Text")) {
-                   Image(systemName: "person")
-               }
-           }
-           ToolbarItem(placement: .automatic) {
-               NavigationLink(destination: SettingView()) {
-                   Image(systemName: "gear")
-               }
-           }
-           #endif
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: Text("Text")) {
+                        Image(systemName: "person")
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SettingView()) {
+                        Image(systemName: "gear")
+                    }
+                }
+#else
+                ToolbarItem(placement: .automatic) {
+                    NavigationLink(destination: Text("Text")) {
+                        Image(systemName: "person")
+                    }
+                }
+                ToolbarItem(placement: .automatic) {
+                    NavigationLink(destination: SettingView()) {
+                        Image(systemName: "gear")
+                    }
+                }
+#endif
             }
         }
     }

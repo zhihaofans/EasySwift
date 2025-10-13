@@ -22,15 +22,15 @@ struct BiliHistoryView: View {
                         ForEach(historyList, id: \.history.oid) { item in
                             if item.history.business == "archive" {
                                 // 避免强制解包引起崩溃（可选优化；功能不变）
-                                                             if let bvid = item.history.bvid {
-                                                                 NavigationLink {
-                                                                     BiliVideoInfoView(bvid: bvid)
-                                                                 } label: {
-                                                                     BiliHistoryItemView(itemData: item)
-                                                                 }
-                                                             } else {
-                                                                 BiliHistoryItemView(itemData: item)
-                                                             }
+                                if let bvid=item.history.bvid {
+                                    NavigationLink {
+                                        BiliVideoInfoView(bvid: bvid)
+                                    } label: {
+                                        BiliHistoryItemView(itemData: item)
+                                    }
+                                } else {
+                                    BiliHistoryItemView(itemData: item)
+                                }
                             } else {
                                 BiliHistoryItemView(itemData: item)
                             }
@@ -44,14 +44,14 @@ struct BiliHistoryView: View {
         }
         .toolbar {
 #if os(iOS)
-          ToolbarItem(placement: .navigationBarTrailing) {
-              Image(systemName: "trash")
-          }
-          #else
-          ToolbarItem(placement: .automatic) {
-              Image(systemName: "trash")
-          }
-          #endif
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Image(systemName: "trash")
+            }
+#else
+            ToolbarItem(placement: .automatic) {
+                Image(systemName: "trash")
+            }
+#endif
         }
         .setNavigationTitle("历史记录")
         .onAppear {
