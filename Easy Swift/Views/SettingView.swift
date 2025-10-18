@@ -19,6 +19,7 @@ struct SettingView: View {
 //    @AppStorage("open_web_in_app") var openWebInApp: Bool = false
     @AppStorage("github_username") var GithubUsername: String = ""
     @AppStorage("github_access_token") var GithubAccessToken: String = ""
+    @AppStorage("tikhub_token") var TikhubToken: String = ""
     @State private var showingAlert = false
     @State private var alertTitle: String = "未知错误"
     @State private var alertText: String = "未知错误"
@@ -56,6 +57,9 @@ struct SettingView: View {
                 Section(header: Text("Github（自动保存）")) {
                     TextField("用户名", text: $GithubUsername)
                     SecureField("Access Token", text: $GithubAccessToken)
+                }
+                Section(header: Text("Tikhub（自动保存）")) {
+                    TextField("Token", text: $TikhubToken)
                 }
                 if let appIcon = getAppIconImage() {
                     AppIconAndNameView(image: appIcon)
