@@ -180,7 +180,7 @@ public struct TApiAwemeDetail: Codable {
                 id_str: String?,
                 desc: String?,
                 content_desc: String?,
-                text_extra: [String: AnyCodable]?,
+                text_extra: [AnyCodable]?,
                 create_time: Int64?,
                 create_time_str: String?,
                 author: TApiAuthor?,
