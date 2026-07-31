@@ -1,6 +1,6 @@
 //
 //  ListView.swift
-//  Bili-Swift
+//  Easy Swift
 //
 //  Created by zzh on 2024/10/27.
 //

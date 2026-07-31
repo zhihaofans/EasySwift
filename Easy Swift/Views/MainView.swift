@@ -36,7 +36,6 @@ struct iosMainView: View {
             NavigationView {
                 List {
                     NavigationLink("二维码", destination: QrcodeView())
-                    NavigationLink("哔了个哩", destination: BiliMainView())
                     NavigationLink("计算器", destination: CalculatorView())
                     NavigationLink("剪贴板", destination: ClipboardView())
                     NavigationLink("Swift UI测试", destination: UITestView())
@@ -128,7 +127,6 @@ struct MacMainView: View {
             NavigationView {
                 List {
                     NavigationLink("二维码", destination: QrcodeView())
-                    NavigationLink("哔了个哩", destination: BiliMainView())
                     NavigationLink("计算器", destination: CalculatorView())
                     NavigationLink("剪贴板", destination: ClipboardView())
                     NavigationLink("Swift UI测试", destination: UITestView())

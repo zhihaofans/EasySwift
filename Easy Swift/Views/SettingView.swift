@@ -15,7 +15,6 @@ import AppKit
 #endif
 
 struct SettingView: View {
-//    @AppStorage("bili_dynamic_image_mode") var isDynamicShowImage: Bool = true
 //    @AppStorage("open_web_in_app") var openWebInApp: Bool = false
     @AppStorage("github_username") var GithubUsername: String = ""
     @AppStorage("github_access_token") var GithubAccessToken: String = ""
@@ -31,29 +30,7 @@ struct SettingView: View {
                 //                        Text("动态是否显示图片")
                 //                    }
                 //                }
-                //                Section(header: Text("网页")) {
-                //                    Toggle(isOn: $openWebInApp) {
-                //                        Text("使用Bilibili app打开网页")
-                //                    }
-                //                }
-                Section(header: Text("哔了个哩")) {
-                    Button(action: {
-                        alertTitle = "你要清空哔哩哔哩功能的登录数据吗？"
-                        alertText = "仅用于开发测试"
-                        showingAlert = true
-                    }) {
-                        Text("清空哔哩哔哩登录数据")
-                    }
-                    .alert(alertTitle, isPresented: $showingAlert) {
-                        Button("清空", action: {
-                            BiliLoginService().removeCookie()
-//                            print("清空登录数据" + setSu.string(trueStr: "成功", falseStr: "失败"))
-                        })
-                        Button("No", action: {})
-                    } message: {
-                        Text(alertText)
-                    }
-                }
+           
                 Section(header: Text("Github（自动保存）")) {
                     TextField("用户名", text: $GithubUsername)
                     SecureField("Access Token", text: $GithubAccessToken)
@@ -70,14 +47,6 @@ struct SettingView: View {
                     TextItem(title: "开发者", detail: "zhihaofans")
                     TextItem(title: "Version", detail: "\(AppUtil().getAppVersion()) (\(AppUtil().getAppBuild()))" /* "0.0.1" */ )
                 }
-//                Section(header: Text("Bilibili")) {
-//                    TextItem(title: "安装哔哩哔哩", detail: AppService().isAppIntalled().string(trueStr: "已安装", falseStr: "未安装"))
-//                }
-//                if LoginService().isLogin() {
-//                    Section(header: Text("登录数据(请不要给别人看⚠️)")) {
-//                        TextItem(title: "Cookies", detail: LoginService().getCookiesString())
-//                    }
-//                }
             }
             // Text("这里是设置").font(.largeTitle)
         }

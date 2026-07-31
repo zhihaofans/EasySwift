@@ -34,13 +34,13 @@ struct GithubMainView: View {
                 // 工具栏分平台放置
                 #if os(iOS)
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: BiliUserView()) {
+                    NavigationLink(destination: SettingView()) {
                         Image(systemName: "person")
                     }
                 }
                 #else
                 ToolbarItem(placement: .automatic) {
-                    NavigationLink(destination: BiliUserView()) {
+                    NavigationLink(destination: SettingView()) {
                         Image(systemName: "person")
                     }
                 }
