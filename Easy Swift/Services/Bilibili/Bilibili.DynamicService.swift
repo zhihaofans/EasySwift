@@ -55,7 +55,8 @@ class BiliDynamicService {
     }
 
     func getDynamicList(callback: @escaping (BiliDynamicListResult)->Void, fail: @escaping (String)->Void) {
-        let url = "https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all"
+        let url = "https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all?platform=web&features=itemOpusStyle,listOnlyfans,onlyfansVote,onlyfansAssetsV2&offset="
+   
         http.get(url) { result in
             if result.isEmpty {
                 fail("result.isEmpty")
@@ -83,8 +84,6 @@ class BiliDynamicService {
             fail("getDynamicList:\(error)")
         }
     }
-
-    // MARK: - Public APIs
 
     /// 获取动态列表（支持官方参数与翻页）
     ///
@@ -139,7 +138,6 @@ class BiliDynamicService {
             return
         }
 
-        // 使用你现有的 HttpUtil 发 GET
         http.get(url) { [weak self] result in
             guard let _ = self else { return }
             if result.isEmpty {
@@ -148,7 +146,6 @@ class BiliDynamicService {
             }
 
             do {
-                // 直接用你已有的模型进行解码
                 let data = try JSONDecoder().decode(BiliDynamicListResult.self, from: Data(result.utf8))
 
                 // B 站常见：code == 0 为成功；-352/其它为风控/异常
@@ -157,13 +154,10 @@ class BiliDynamicService {
                     return
                 }
 
-                // 从 data 里把翻页游标抠出来（字段名以文档/实测为准）
-                // 假定你的 `BiliDynamicListResult` 里存在 `data.offset` 和 `data.update_baseline`、可选的 `data.page`。
-                // 如果你的模型字段名不同，请在此处按实际字段名取值。
                 let nextCursor = Cursor(
-                    offset: data.data?.offset ?? data.data?.items.last?.id_str, // 兜底：有些版本把 offset 放在 data 根上
+                    offset: data.data?.offset ?? data.data?.items.last?.id_str,
                     updateBaseline: data.data?.update_baseline,
-                    page: (data.data as AnyObject?)?["page"] as? Int // 如果模型没有 page，可忽略
+                    page: (data.data as AnyObject?)?["page"] as? Int
                 )
 
                 completion(data, nextCursor)

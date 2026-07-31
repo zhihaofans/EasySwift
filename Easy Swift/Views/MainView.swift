@@ -136,10 +136,6 @@ struct MacMainView: View {
                     NavigationLink("Github", destination: GithubMainView())
                     NavigationLink("TODO", destination: TodoView())
 
-                    // [UPDATED macOS] 隐藏 iOS 专属的 Face ID 按钮（macOS 无 FaceID/LAContext 流程）
-                    // 如需 Touch ID，也应单独实现 LAContext.evaluatePolicy 的 macOS 流程
-
-                    // [UPDATED macOS] 返回桌面（隐藏应用窗口）
                     Button(action: {
                         NSApplication.shared.hide(nil)
                     }) {

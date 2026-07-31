@@ -34,6 +34,7 @@ struct BiliDynamicListData: Codable {
 }
 
 struct BiliDynamicListItem: Codable {
+    let opus: String
     let visible: Bool
     let id_str: String
     let type: String
@@ -68,7 +69,10 @@ struct BiliDynamicListItem: Codable {
         return self.modules.module_dynamic.major?.archive?.title ?? self.modules.module_dynamic.major?.article?.title ?? self.modules.module_dynamic.desc?.text ?? self.modules.module_dynamic.getTitle() ?? "[文字神秘消失了]"
     }
 }
-
+struct BiliDynamicListItemOpus: Codable {
+    let title: String
+    
+}
 struct BiliDynamicListForwardItem: Codable {
     let visible: Bool
     let id_str: String

@@ -353,8 +353,9 @@ struct DynamicItemImageView: View {
                 }
                 .frame(maxHeight: .infinity) // 设置对齐方式
                 .onClick {
-                    let webUrl=appService.checkLink(itemData.modules.module_author.jump_url)
-                    appService.openUrl(appUrl: webUrl, webUrl: webUrl)
+                    print(itemData)
+//                    let webUrl=appService.checkLink(itemData.modules.module_author.jump_url)
+//                    appService.openUrl(appUrl: webUrl, webUrl: webUrl)
                 }
 //                .contentShape(Rectangle()) // 加这行才实现可点击
 //                .onTapGesture {
