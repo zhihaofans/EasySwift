@@ -31,6 +31,12 @@ struct SearchView: View {
                         Text("DeepL 翻译").tag(SearchType.deepl_translate)
                         Text("Steam游戏").tag(SearchType.steam_game)
                         Text("Hugging Face").tag(SearchType.huggingface)
+                        Text("X(推特)").tag(SearchType.twitter)
+                        Text("小红书🍠").tag(SearchType.xiaohongshu)
+                        Text("微博").tag(SearchType.weibo)
+                        Text("知乎").tag(SearchType.zhihu)
+                        Text("Instgram用户").tag(SearchType.instagram_user)
+                        Text("抖音").tag(SearchType.douyin)
                     } label: {
                         Text("类型")
                     }
@@ -110,23 +116,43 @@ struct SearchView: View {
         case .huggingface:
             safariUrlString = "https://huggingface.co/search/full-text?q=\(SearchKey)"
             isShowingSafari = true
+        case .twitter:
+            safariUrlString = "https://mobile.x.com/search?q=\(SearchKey)"
+            isShowingSafari = true
+        case .xiaohongshu:
+            isShowingSafari = false
+            AppUtil().openUrl("xhsdiscover://search/result?keyword=\(SearchKey)")
+        case .weibo:
+            isShowingSafari = false
+            AppUtil().openUrl("sinaweibo://searchall?q=\(SearchKey)")
+        case .zhihu:
+            isShowingSafari = false
+            AppUtil().openUrl("zhihu://search?keyword=\(SearchKey)")
+        case .instagram_user:
+            isShowingSafari = false
+            AppUtil().openUrl("instagram://user?username=\(SearchKey)")
+        case .douyin:
+            isShowingSafari = false
+            AppUtil().openUrl("snssdk1128://search?keyword=\(SearchKey)")
 //        default:
 //            break
         }
         // [UPDATED macOS] iOS 使用 Safari 预览；macOS 用系统浏览器打开
-        #if os(iOS)
-        isShowingSafari = true
-        #elseif os(macOS)
-        if let url = URL(string: safariUrlString) {
-            NSWorkspace.shared.open(url)
-        }
-        #endif
+//        #if os(iOS)
+//        isShowingSafari = true
+//        #elseif os(macOS)
+//        if let url = URL(string: safariUrlString) {
+//            NSWorkspace.shared.open(url)
+//        }
+//        #endif
     }
 }
 
 enum SearchType: String, CaseIterable, Identifiable {
-    case baidu, google, bing, bilibili, github, google_translate, baidu_translate, deepl_translate, steam_game, huggingface
-    var id: Self { self }
+    case baidu, google, bing, bilibili, github, google_translate, baidu_translate, deepl_translate, steam_game, huggingface, twitter, xiaohongshu, weibo, zhihu, instagram_user, douyin
+    var id: Self {
+        self
+    }
 }
 
 // #Preview {
