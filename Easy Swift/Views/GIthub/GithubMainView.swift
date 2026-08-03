@@ -88,12 +88,16 @@ struct GithubMainView: View {
 
 enum DateType: String, CaseIterable, Identifiable {
     case day, week, month
-    var id: Self { self }
+    var id: Self {
+        self
+    }
 }
 
 enum LanguageType: String, CaseIterable, Identifiable {
     case swift, java, python, go, javascript
-    var id: Self { self }
+    var id: Self {
+        self
+    }
 }
 
 // Github Trending
@@ -218,7 +222,9 @@ struct GithubTrendingContentView: View {
 
 enum StarsViewType: String, CaseIterable, Identifiable {
     case star, watch, fork
-    var id: Self { self }
+    var id: Self {
+        self
+    }
 }
 
 struct GithubStarsView: View {

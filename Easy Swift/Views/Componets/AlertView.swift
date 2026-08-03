@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+
 // MARK: - ♻️ 旧版兼容（已弃用，内部转发为系统样式）
+
 @available(*, deprecated, renamed: "InputAlertView", message: "已整合为系统样式，请迁移到 InputAlertView 或 .inputAlert(...) 修饰符")
 struct InputAlertViewOld: View {
     let title: String
@@ -17,25 +19,25 @@ struct InputAlertViewOld: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text(title)
+            Text(self.title)
                 .font(.title2)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
 
-            TextField(placeholder, text: $inputText)
+            TextField(self.placeholder, text: self.$inputText)
                 .textFieldStyle(.roundedBorder)
                 .padding()
 
             HStack {
                 Button("取消") {
-                    isPresented=false
+                    self.isPresented = false
                 }
                 .foregroundColor(.red)
                 .padding(.horizontal)
 
                 Button("确定") {
-                    isPresented=false
-                    callback(inputText)
+                    self.isPresented = false
+                    self.callback(self.inputText)
                 }
                 .foregroundColor(.blue)
                 .padding(.horizontal)
@@ -48,6 +50,7 @@ struct InputAlertViewOld: View {
         .shadow(radius: 10)
     }
 }
+
 /// 系统样式的输入弹窗
 struct InputAlertView: View {
     let title: String
@@ -59,11 +62,11 @@ struct InputAlertView: View {
     // 为 macOS / iOS 提供一致的系统样式输入
     var body: some View {
         EmptyView()
-            .alert(title, isPresented: $isPresented) {
-                TextField(placeholder, text: $inputText)
-                Button("取消", role: .cancel) { }
+            .alert(self.title, isPresented: self.$isPresented) {
+                TextField(self.placeholder, text: self.$inputText)
+                Button("取消", role: .cancel) {}
                 Button("确定") {
-                    callback(inputText)
+                    self.callback(self.inputText)
                 }
             } message: {
                 Text("请输入内容")
@@ -72,6 +75,7 @@ struct InputAlertView: View {
 }
 
 // MARK: - 🍬 便捷修饰符：任何视图上一行弹系统输入框
+
 public extension View {
     /// 在当前视图上以系统样式弹出带输入框的 Alert
     /// - Parameters:

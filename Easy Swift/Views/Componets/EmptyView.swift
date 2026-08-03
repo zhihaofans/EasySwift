@@ -29,7 +29,7 @@ struct EmptyTextPageView: View {
         Spacer()
     }
 
-    init(title: String,text: String) {
+    init(title: String, text: String) {
         self.title = title
         self.text = text
     }

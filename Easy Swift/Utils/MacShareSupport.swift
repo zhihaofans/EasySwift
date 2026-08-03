@@ -13,7 +13,10 @@ private struct MacSharingPicker: NSViewRepresentable {
     @Binding var isPresented: Bool
     var items: [Any]
 
-    func makeNSView(context: Context) -> NSView { NSView(frame: .zero) }
+    func makeNSView(context: Context) -> NSView {
+        NSView(frame: .zero)
+    }
+
     func updateNSView(_ nsView: NSView, context: Context) {
         guard isPresented else { return }
         let picker = NSSharingServicePicker(items: items)

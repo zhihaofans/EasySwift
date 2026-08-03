@@ -4,12 +4,12 @@
 //
 //  Created by zzh on 2024/11/24.
 //
-import VisionKit
-import Vision
 import AVFoundation
 import CoreImage.CIFilterBuiltins
 import SwiftUI
 import SwiftUtils
+import Vision
+import VisionKit
 
 struct QrcodeView: View {
     @State private var showingAlert=false
@@ -17,7 +17,7 @@ struct QrcodeView: View {
     @State private var alertText: String="未知错误"
     @State private var qrcodeContent: String=""
     @State private var hasPermission=false
-    @State private var isShowingScanner = false
+    @State private var isShowingScanner=false
     var body: some View {
         VStack {
             Form {
@@ -34,8 +34,8 @@ struct QrcodeView: View {
                 #if os(iOS)
                 .sheet(isPresented: $isShowingScanner) {
                     QRScannerView { value in
-                        qrcodeContent = value
-                        isShowingScanner = false
+                        qrcodeContent=value
+                        isShowingScanner=false
                     }
                     .ignoresSafeArea()
                 }
@@ -53,7 +53,6 @@ struct QrcodeView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .padding(.horizontal, 20)
-                        
                             .frame(width: 240, height: 240)
                         #elseif os(macOS)
                         Image(nsImage: qrImage!)
@@ -114,8 +113,7 @@ struct QrcodeView: View {
         return UIImage(cgImage: cgImage)
         #else
         let size=NSSize(width: transformed.extent.width, height: transformed.extent.height)
-        let image=NSImage(cgImage: cgImage, size: size)
-        return image
+        return NSImage(cgImage: cgImage, size: size)
         #endif
     }
 
@@ -164,40 +162,41 @@ struct QrcodeView: View {
     #if os(iOS)
     private func requestCameraThenPresentScanner() {
         Task {
-            let status = await currentCameraAuthorizationStatus()
+            let status=await currentCameraAuthorizationStatus()
 
             switch status {
             case .authorized:
                 await MainActor.run {
                     guard DataScannerViewController.isSupported,
-                          DataScannerViewController.isAvailable else {
-                        alertTitle = "扫码不可用"
-                        alertText = "当前设备不支持系统扫码，或相机暂时不可用。"
-                        showingAlert = true
+                          DataScannerViewController.isAvailable
+                    else {
+                        alertTitle="扫码不可用"
+                        alertText="当前设备不支持系统扫码，或相机暂时不可用。"
+                        showingAlert=true
                         return
                     }
-                    isShowingScanner = true
+                    isShowingScanner=true
                 }
 
             case .notDetermined:
-                let granted = await requestAccess()
+                let granted=await requestAccess()
                 await MainActor.run {
-                    hasPermission = granted
+                    hasPermission=granted
                     if granted {
                         requestCameraThenPresentScanner()
                     } else {
-                        alertTitle = "获取相机权限失败"
-                        alertText = "请在系统设置中允许相机访问。"
-                        showingAlert = true
+                        alertTitle="获取相机权限失败"
+                        alertText="请在系统设置中允许相机访问。"
+                        showingAlert=true
                     }
                 }
 
             case .denied, .restricted:
                 await MainActor.run {
-                    hasPermission = false
-                    alertTitle = "相机权限不可用"
-                    alertText = "请在系统设置中允许相机访问。"
-                    showingAlert = true
+                    hasPermission=false
+                    alertTitle="相机权限不可用"
+                    alertText="请在系统设置中允许相机访问。"
+                    showingAlert=true
                 }
 
             @unknown default:
@@ -223,7 +222,6 @@ struct QrcodeView: View {
     }
 }
 
-
 #if os(iOS)
 struct QRScannerView: UIViewControllerRepresentable {
     let onScan: (String) -> Void
@@ -247,7 +245,7 @@ struct QRScannerView: UIViewControllerRepresentable {
 
 @MainActor
 final class QRScannerHostController: UIViewController {
-    private let scanner = DataScannerViewController(
+    private let scanner=DataScannerViewController(
         recognizedDataTypes: [.barcode(symbologies: [.qr])],
         qualityLevel: .balanced,
         recognizesMultipleItems: false,
@@ -258,13 +256,14 @@ final class QRScannerHostController: UIViewController {
     )
 
     private let onScan: (String) -> Void
-    private var hasReturnedResult = false
+    private var hasReturnedResult=false
 
     init(onScan: @escaping (String) -> Void) {
-        self.onScan = onScan
+        self.onScan=onScan
         super.init(nibName: nil, bundle: nil)
     }
 
+    @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -273,7 +272,7 @@ final class QRScannerHostController: UIViewController {
         super.viewDidLoad()
 
         addChild(scanner)
-        scanner.view.translatesAutoresizingMaskIntoConstraints = false
+        scanner.view.translatesAutoresizingMaskIntoConstraints=false
         view.addSubview(scanner.view)
 
         NSLayoutConstraint.activate([
@@ -284,7 +283,7 @@ final class QRScannerHostController: UIViewController {
         ])
 
         scanner.didMove(toParent: self)
-        scanner.delegate = self
+        scanner.delegate=self
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -306,7 +305,6 @@ final class QRScannerHostController: UIViewController {
             print("启动扫码失败：\(error.localizedDescription)")
             return
         }
-
     }
 
     func stopScanning() {
@@ -322,12 +320,13 @@ extension QRScannerHostController: DataScannerViewControllerDelegate {
         didTapOn item: RecognizedItem
     ) {
         guard !hasReturnedResult,
-              case let .barcode(code) = item,
-              let value = code.payloadStringValue else {
+              case let .barcode(code)=item,
+              let value=code.payloadStringValue
+        else {
             return
         }
 
-        hasReturnedResult = true
+        hasReturnedResult=true
         dataScanner.stopScanning()
         onScan(value)
     }

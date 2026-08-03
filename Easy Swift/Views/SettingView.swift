@@ -29,7 +29,7 @@ struct SettingView: View {
                 //                        Text("动态是否显示图片")
                 //                    }
                 //                }
-           
+
                 Section(header: Text("Github（自动保存）")) {
                     TextField("用户名", text: $GithubUsername)
                     SecureField("Access Token", text: $GithubAccessToken)
