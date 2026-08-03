@@ -22,24 +22,29 @@ struct QrcodeView: View {
         VStack {
             Form {
                 Section(header: Text("输入二维码文本")) {
-                    TextField(/*@START_MENU_TOKEN@*/"Placeholder"/*@END_MENU_TOKEN@*/, text: self.$qrcodeContent)
-                    #if os(iOS)
-                    Button(action: {
-                        requestCameraThenPresentScanner()
-                    }) {
-                        Text("扫一扫(\(self.hasPermission ? "已授权" : "未授权"))")
-                    }
-                    #endif
+                    TextField(/*@START_MENU_TOKEN@*/"Placeholder"/*@END_MENU_TOKEN@*/, text: self.$qrcodeContent, axis: .vertical).lineLimit(3)
                 }
-                #if os(iOS)
-                .sheet(isPresented: $isShowingScanner) {
-                    QRScannerView { value in
-                        qrcodeContent=value
-                        isShowingScanner=false
-                    }
-                    .ignoresSafeArea()
+                // #if os(iOS)
+                Button(action: {
+                    requestCameraThenPresentScanner()
+                }) {
+                    Label("扫一扫", systemImage: "qrcode.viewfinder")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(red: 0.04, green: 0.53, blue: 1.0), .blue],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: .blue.opacity(0.28), radius: 8, y: 4)
                 }
-                #endif
+                .buttonStyle(PressableButtonStyle())
+                .listRowBackground(Color.clear)
+                // #endif
                 if self.qrcodeContent.isNotEmpty {
                     let qrImage=self.generateQRCode(from: EncodeUtil().urlDecode(self.qrcodeContent))
                     if qrImage == nil {
@@ -60,10 +65,56 @@ struct QrcodeView: View {
                             .aspectRatio(contentMode: .fit)
                             .padding(.horizontal, 20)
                         #endif
+                        Button(action: {
+                            ClipboardUtil().setString(qrcodeContent)
+
+                        }) {
+                            Label("复制文字", systemImage: "arrow.right.page.on.clipboard")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, minHeight: 56)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color(red: 0.04, green: 0.53, blue: 1.0), .blue],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .shadow(color: .blue.opacity(0.28), radius: 8, y: 4)
+                        }
+                        .buttonStyle(PressableButtonStyle())
+                        .listRowBackground(Color.clear)
+                        Button(action: {}) {
+                            Label("分享二维码", systemImage: "square.and.arrow.up")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, minHeight: 56)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color(red: 0.04, green: 0.53, blue: 1.0), .blue],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .shadow(color: .blue.opacity(0.28), radius: 8, y: 4)
+                        }
+                        .buttonStyle(PressableButtonStyle())
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
         }
+        #if os(iOS)
+        .sheet(isPresented: $isShowingScanner) {
+            QRScannerView { value in
+                qrcodeContent=value
+                isShowingScanner=false
+            }
+            .ignoresSafeArea()
+        }
+        #endif
         .alert(alertTitle, isPresented: $showingAlert) {
             Button("OK", action: {
                 self.alertTitle=""
@@ -222,6 +273,16 @@ struct QrcodeView: View {
     }
 }
 
+private struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .brightness(configuration.isPressed ? -0.08 : 0)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
 #if os(iOS)
 struct QRScannerView: UIViewControllerRepresentable {
     let onScan: (String) -> Void
@@ -256,6 +317,7 @@ final class QRScannerHostController: UIViewController {
     )
 
     private let onScan: (String) -> Void
+    private var recognitionTask: Task<Void, Never>?
     private var hasReturnedResult=false
 
     init(onScan: @escaping (String) -> Void) {
@@ -283,7 +345,6 @@ final class QRScannerHostController: UIViewController {
         ])
 
         scanner.didMove(toParent: self)
-        scanner.delegate=self
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -305,30 +366,33 @@ final class QRScannerHostController: UIViewController {
             print("启动扫码失败：\(error.localizedDescription)")
             return
         }
+
+        recognitionTask?.cancel()
+        recognitionTask=Task { [weak self, weak scanner] in
+            guard let self, let scanner else { return }
+
+            for await items in scanner.recognizedItems {
+                guard !self.hasReturnedResult else { return }
+
+                for case let .barcode(code) in items {
+                    guard let value=code.payloadStringValue else { continue }
+
+                    self.hasReturnedResult=true
+                    scanner.stopScanning()
+                    self.onScan(value)
+                    return
+                }
+            }
+        }
     }
 
     func stopScanning() {
+        recognitionTask?.cancel()
+        recognitionTask=nil
+
         if scanner.isScanning {
             scanner.stopScanning()
         }
-    }
-}
-
-extension QRScannerHostController: DataScannerViewControllerDelegate {
-    func dataScanner(
-        _ dataScanner: DataScannerViewController,
-        didTapOn item: RecognizedItem
-    ) {
-        guard !hasReturnedResult,
-              case let .barcode(code)=item,
-              let value=code.payloadStringValue
-        else {
-            return
-        }
-
-        hasReturnedResult=true
-        dataScanner.stopScanning()
-        onScan(value)
     }
 }
 #endif
