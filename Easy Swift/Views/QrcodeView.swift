@@ -142,13 +142,6 @@ struct QrcodeView: View {
         }
     }
 
-    // MARK: - 生命周期初始化（修复版）
-
-    // 删除了原先 init() 里对 @State 的错误使用。
-    // SwiftUI View 中不用在 init 里读/写 @State；改为在 .task / .onAppear 中做。
-
-    // MARK: - 二维码生成（跨平台）
-
     private func generateQRCode(from string: String, scale: CGFloat=5.0) -> PlatformImage? {
         let context=CIContext()
         let filter=CIFilter.qrCodeGenerator()
@@ -159,7 +152,6 @@ struct QrcodeView: View {
         let transformed=output.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
         guard let cgImage=context.createCGImage(transformed, from: transformed.extent) else { return nil }
 
-        // [UPDATED macOS] 返回跨平台图片
         #if os(iOS)
         return UIImage(cgImage: cgImage)
         #else

@@ -41,7 +41,6 @@ struct iosMainView: View {
                     NavigationLink("Swift UI测试", destination: UITestView())
                     NavigationLink("搜索", destination: SearchView())
                     NavigationLink("Github", destination: GithubMainView())
-                    NavigationLink("TODO", destination: TodoView())
                     Button(action: {
                         AuthUtil().authenticate(title: "FaceId或TouchId") { result in
                             print("authenticate\(result)")
@@ -60,13 +59,6 @@ struct iosMainView: View {
                         })
                     } message: {
                         Text(alertText)
-                    }
-                    Button(action: {
-                        #if canImport(UIKit)
-                        UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
-                        #endif
-                    }) {
-                        Text("返回桌面")
                     }
                 }
                 .navigationTitle(AppUtil().getAppName())
@@ -132,7 +124,6 @@ struct MacMainView: View {
                     NavigationLink("Swift UI测试", destination: UITestView())
                     NavigationLink("搜索", destination: SearchView())
                     NavigationLink("Github", destination: GithubMainView())
-                    NavigationLink("TODO", destination: TodoView())
 
                     Button(action: {
                         NSApplication.shared.hide(nil)

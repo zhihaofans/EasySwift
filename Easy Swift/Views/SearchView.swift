@@ -47,38 +47,74 @@ struct SearchView: View {
                             self.goSearch()
                         }
                     }) {
-                        Text("Go to Search")
+//                        Text("Go to Search")
+                        Label("搜索", systemImage: "magnifyingglassw")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 56)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(red: 0.04, green: 0.53, blue: 1.0), .blue],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: .blue.opacity(0.28), radius: 8, y: 4)
                     }
                 }
+
+//                Form {
+//                    Button(action: {
+//                        if SearchKey.isNotEmpty {
+//                            self.goSearch()
+//                        }
+//                    }) {
+//                        Label("搜索", systemImage: "magnifyingglassw")
+//                            .font(.headline)
+//                            .foregroundStyle(.white)
+//                            .frame(maxWidth: .infinity, minHeight: 56)
+//                            .background(
+//                                LinearGradient(
+//                                    colors: [Color(red: 0.04, green: 0.53, blue: 1.0), .blue],
+//                                    startPoint: .topLeading,
+//                                    endPoint: .bottomTrailing
+//                                )
+//                            )
+//                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+//                            .shadow(color: .blue.opacity(0.28), radius: 8, y: 4)
+//                    }
+//                    .listRowBackground(Color.clear)
+//                }
             }
         }
         .setNavigationTitle("Search")
-        .toolbar {
-            // [UPDATED macOS] 工具栏分平台放置
-            #if os(iOS)
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: Text("Hello, World!")) {
-                    Image(systemName: "person")
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: SettingView()) {
-                    Image(systemName: "gear")
-                }
-            }
-            #elseif os(macOS)
-            ToolbarItem(placement: .automatic) {
-                NavigationLink(destination: Text("Hello, World!")) {
-                    Image(systemName: "person")
-                }
-            }
-            ToolbarItem(placement: .automatic) {
-                NavigationLink(destination: SettingView()) {
-                    Image(systemName: "gear")
-                }
-            }
-            #endif
-        }
+//        .toolbar {
+//            // [UPDATED macOS] 工具栏分平台放置
+//            #if os(iOS)
+//            ToolbarItem(placement: .navigationBarTrailing) {
+//                NavigationLink(destination: Text("Hello, World!")) {
+//                    Image(systemName: "person")
+//                }
+//            }
+//            ToolbarItem(placement: .navigationBarTrailing) {
+//                NavigationLink(destination: SettingView()) {
+//                    Image(systemName: "gear")
+//                }
+//            }
+//            #elseif os(macOS)
+//            ToolbarItem(placement: .automatic) {
+//                NavigationLink(destination: Text("Hello, World!")) {
+//                    Image(systemName: "person")
+//                }
+//            }
+//            ToolbarItem(placement: .automatic) {
+//                NavigationLink(destination: SettingView()) {
+//                    Image(systemName: "gear")
+//                }
+//            }
+//            #endif
+//        }
         #if os(iOS)
         .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
         #endif
