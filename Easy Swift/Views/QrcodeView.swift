@@ -5,6 +5,7 @@
 //  Created by zzh on 2024/11/24.
 //
 import AVFoundation
+import PhotosUI
 import SwiftUI
 import SwiftUtils
 import Vision
@@ -15,8 +16,8 @@ struct QrcodeView: View {
     @State private var alertTitle: String="未知错误"
     @State private var alertText: String="未知错误"
     @State private var qrcodeContent: String=""
-    @State private var hasPermission=false
     @State private var isShowingScanner=false
+    @State private var selectedPhoto: PhotosPickerItem?
     var body: some View {
         VStack(spacing: 16) {
             // 输入区：OS 26 玻璃材质，加大尺寸
@@ -73,7 +74,7 @@ struct QrcodeView: View {
                         Spacer()
                     }
                     .padding(.vertical, 8)
-                    HStack {
+                    HStack(spacing: 16) {
                         Spacer()
                         Button(action: {
                             ClipboardUtil().setString(qrcodeContent)
@@ -89,10 +90,6 @@ struct QrcodeView: View {
                         }
                         .buttonStyle(.glassProminent)
                         .controlSize(.large)
-                        Spacer()
-                    }
-                    HStack {
-                        Spacer()
                         Button(action: {
                             ShareUtil().shareImage(img: qrImage!)
                         }) {
@@ -135,17 +132,20 @@ struct QrcodeView: View {
         .toolbar {
             #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("相机权限") { requestCameraPermissions() }
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Label("相册", systemImage: "photo.on.rectangle")
+                }
             }
             #else
             ToolbarItem(placement: .automatic) {
-                Button("相机权限") { requestCameraPermissions() }
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Label("相册", systemImage: "photo.on.rectangle")
+                }
             }
             #endif
         }
-        .task {
-            // [首次进入时检查权限（不弹系统框）
-            hasPermission=await currentCameraAuthorizationStatus() == .authorized
+        .onChange(of: selectedPhoto) { _, newValue in
+            decodeQR(from: newValue)
         }
     }
 
@@ -153,19 +153,54 @@ struct QrcodeView: View {
     //  - macOS 10.14+/iOS 7+ 可用 AVFoundation 权限 API
     //  - Info.plist 需包含 NSCameraUsageDescription（iOS/macOS 都需要）
 
-    private func requestCameraPermissions() {
-        CameraUtil().checkCameraPermissions(success: {
-            Task { @MainActor in
-                self.hasPermission=true
+    // 从相册图片解析二维码（非二维码图片会提示）
+    private func decodeQR(from item: PhotosPickerItem?) {
+        guard let item else { return }
+        Task {
+            guard let data=try? await item.loadTransferable(type: Data.self) else {
+                showAlert(title: "读取失败", text: "无法加载所选图片")
+                return
             }
-        }, fail: { message in
-            Task { @MainActor in
-                self.hasPermission=false
-                self.alertTitle="相机权限不可用"
-                self.alertText=message
-                self.showingAlert=true
+            #if os(macOS)
+            guard let image=NSImage(data: data) else {
+                showAlert(title: "读取失败", text: "无法加载所选图片")
+                return
             }
-        })
+            var rect=CGRect(origin: .zero, size: image.size)
+            guard let cgImage=image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else {
+                showAlert(title: "读取失败", text: "无法加载所选图片")
+                return
+            }
+            #else
+            guard let cgImage=UIImage(data: data)?.cgImage else {
+                showAlert(title: "读取失败", text: "无法加载所选图片")
+                return
+            }
+            #endif
+
+            let request=VNDetectBarcodesRequest()
+            request.symbologies=[.qr]
+            do {
+                try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+                if let payload=request.results?.first?.payloadStringValue {
+                    await MainActor.run {
+                        qrcodeContent=payload
+                        selectedPhoto=nil
+                    }
+                } else {
+                    showAlert(title: "未识别到二维码", text: "所选图片中没有检测到二维码，请选择包含二维码的图片")
+                }
+            } catch {
+                showAlert(title: "解析失败", text: error.localizedDescription)
+            }
+        }
+    }
+
+    @MainActor
+    private func showAlert(title: String, text: String) {
+        alertTitle=title
+        alertText=text
+        showingAlert=true
     }
 
     #if os(iOS)
@@ -184,7 +219,6 @@ struct QrcodeView: View {
             }
         }, fail: { message in
             Task { @MainActor in
-                self.hasPermission=false
                 self.alertTitle="相机权限不可用"
                 self.alertText=message
                 self.showingAlert=true
@@ -192,12 +226,6 @@ struct QrcodeView: View {
         })
     }
     #endif
-
-    // 当前授权状态（不会触发系统弹窗）
-    private func currentCameraAuthorizationStatus() async -> AVAuthorizationStatus {
-        // iOS / macOS 通用
-        AVCaptureDevice.authorizationStatus(for: .video)
-    }
 }
 
 #if os(iOS)
