@@ -48,7 +48,7 @@ struct SearchView: View {
                         }
                     }) {
 //                        Text("Go to Search")
-                        Label("搜索", systemImage: "magnifyingglassw")
+                        Label("搜索", systemImage: "magnifyingglass")
                             .font(.headline)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity, minHeight: 56)
@@ -70,7 +70,7 @@ struct SearchView: View {
 //                            self.goSearch()
 //                        }
 //                    }) {
-//                        Label("搜索", systemImage: "magnifyingglassw")
+//                        Label("搜索", systemImage: "magnifyingglass")
 //                            .font(.headline)
 //                            .foregroundStyle(.white)
 //                            .frame(maxWidth: .infinity, minHeight: 56)
