@@ -1,14 +1,7 @@
 ### macOS
-# Finder metadata
 .DS_Store
-
-# Thumbnails
 ._*
-
-# Custom folder icons
-Icon
-
-# Volume root files
+Icon
 .DocumentRevisions-V100
 .fseventsd
 .Spotlight-V100
@@ -18,48 +11,30 @@ Icon
 .com.apple.timemachine.donotpresent
 
 ### Xcode
-# Xcode user settings
+# User-specific
 xcuserdata/
+*.xcuserstate
 
-# Xcode build artifacts
+# Build artifacts
 build/
 DerivedData/
-
-# Obj-C/Swift specific
 *.hmap
 *.ipa
 *.dSYM.zip
 *.dSYM
+*.xcresult
 
-# Playgrounds
-timeline.xctimeline
-playground.xcworkspace
-
-# Xcode state files
+# State files
 *.xccheckout
 *.moved-aside
-*.xcuserstate
 *.xcscmblueprint
-
-
-### Swift
-# Xcode user settings
-xcuserdata/
-
-# Xcode build data
-DerivedData/
-
-# Swift/Obj-C specific
-*.hmap
-
-# App packaging
-*.ipa
-*.dSYM.zip
-*.dSYM
 
 # Playgrounds
 timeline.xctimeline
 playground.xcworkspace
 
-# Swift Package Manager
-# Package.resolved
+### Swift Package Manager
+.build/
+.swiftpm/
+
+# Package.resolved 建议提交，故不忽略
