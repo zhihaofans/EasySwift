@@ -74,31 +74,3 @@ struct InputAlertView: View {
     }
 }
 
-// MARK: - 🍬 便捷修饰符：任何视图上一行弹系统输入框
-
-public extension View {
-    /// 在当前视图上以系统样式弹出带输入框的 Alert
-    /// - Parameters:
-    ///   - title: 标题
-    ///   - placeholder: 占位提示
-    ///   - text: 绑定的文本
-    ///   - isPresented: 是否显示
-    ///   - onConfirm: 点“确定”回调（传回输入内容）
-    func inputAlert(
-        _ title: String,
-        placeholder: String = "",
-        text: Binding<String>,
-        isPresented: Binding<Bool>,
-        onConfirm: @escaping (String) -> Void
-    ) -> some View {
-        self.background(
-            InputAlertView(
-                title: title,
-                placeholder: placeholder,
-                inputText: text,
-                isPresented: isPresented,
-                callback: onConfirm
-            )
-        )
-    }
-}
