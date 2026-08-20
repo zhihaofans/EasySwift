@@ -10,141 +10,51 @@ import SwiftUtils
 
 struct MainView: View {
     var body: some View {
-//        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
         #if os(iOS)
-        iosMainView()
-        #else
-        MacMainView()
-        #endif
-    }
-}
-
-@available(macOS, unavailable)
-struct iosMainView: View {
-    @State private var selectedTab=0
-    @State private var showingAlert=false
-    @State private var alertTitle: String="未知错误"
-    @State private var alertText: String="未知错误"
-    var body: some View {
-        switch selectedTab {
-//        case 1:
-//            Text("test")
-        // ScanView()
-        case 2:
-            EmptyTextPageView(title: "更多", text: "更新中...")
-        default:
-            NavigationView {
-                List {
-                    NavigationLink("二维码", destination: QrcodeView())
-                    NavigationLink("计算器", destination: CalculatorView())
-                    NavigationLink("剪贴板", destination: ClipboardView())
-                    NavigationLink("Swift UI测试", destination: UITestView())
-                    NavigationLink("搜索", destination: SearchView())
-                    NavigationLink("Github", destination: GithubMainView())
-                    Button(action: {
-                        AuthUtil().authenticate(title: "FaceId或TouchId") { result in
-                            print("authenticate\(result)")
-                        } fail: { err in
-                            print("authenticate error:\(err)")
-                        }
-
-                    }) {
-                        Text("FaceId")
-                    }
-                    .alert(alertTitle, isPresented: $showingAlert) {
-                        Button("OK", action: {
-                            alertTitle=""
-                            alertText=""
-                            showingAlert=false
-                        })
-                    } message: {
-                        Text(alertText)
-                    }
-                }
+        NavigationStack {
+            mainList()
                 .navigationTitle(AppUtil().getAppName())
                 .toolbar {
-//                    ToolbarItem(placement: .navigationBarTrailing) {
-//                        NavigationLink(destination: Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)) {
-//                            Image(systemName: "person")
-//                        }
-//                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         NavigationLink(destination: SettingView()) {
                             Image(systemName: "gear")
                         }
                     }
                 }
-            }
         }
-//        TabView(selection: $selectedTab) {
-//            Text("")
-//                .tabItem {
-//                    Label("主页", systemImage: "house")
-//                }
-//                .tag(0)
-//
-//            Text("")
-//                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
-//                .tabItem {
-//                    Label("扫一扫", systemImage: "qrcode.viewfinder")
-//                }
-//                .tag(1)
-//
-//            Text("")
-//                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
-//                .tabItem {
-//                    Label("更多", systemImage: "ellipsis")
-//                }
-//                .tag(2)
-//        }
-//        .frame(maxHeight: 50) // 限制最大高度
-    }
-}
-
-#if os(macOS)
-// [UPDATED macOS] 新增：macOS 主视图
-import AppKit
-
-struct MacMainView: View {
-    @State private var selectedTab=0
-    @State private var showingAlert=false
-    @State private var alertTitle: String="未知错误"
-    @State private var alertText: String="未知错误"
-
-    var body: some View {
-        switch selectedTab {
-        case 2:
-            EmptyTextPageView(title: "更多", text: "更新中...")
-        default:
-            NavigationView {
-                List {
-                    NavigationLink("二维码", destination: QrcodeView())
-                    NavigationLink("计算器", destination: CalculatorView())
-                    NavigationLink("剪贴板", destination: ClipboardView())
-                    NavigationLink("Swift UI测试", destination: UITestView())
-                    NavigationLink("搜索", destination: SearchView())
-                    NavigationLink("Github", destination: GithubMainView())
-
-                    Button(action: {
-                        NSApplication.shared.hide(nil)
-                    }) {
-                        Text("返回桌面")
-                    }
-                }
+        #else
+        // [UPDATED macOS] NavigationSplitView 侧边栏布局（macOS 原生风格，玻璃材质）
+        NavigationSplitView {
+            mainList()
                 .navigationTitle(AppUtil().getAppName())
+                .navigationSplitViewColumnWidth(min: 180, ideal: 220)
                 .toolbar {
-                    // [UPDATED macOS] 工具栏位置用 .automatic，而非 .navigationBarTrailing
                     ToolbarItem(placement: .automatic) {
                         NavigationLink(destination: SettingView()) {
                             Image(systemName: "gear")
                         }
                     }
                 }
-            }
+        } detail: {
+            ContentUnavailableView("选择一个功能", systemImage: "sidebar.left")
+        }
+        #endif
+    }
+
+    // iOS / macOS 统一功能列表
+    @ViewBuilder
+    private func mainList() -> some View {
+        List {
+            NavigationLink("二维码", destination: QrcodeView())
+            NavigationLink("计算器", destination: CalculatorView())
+            NavigationLink("剪贴板", destination: ClipboardView())
+            NavigationLink("Swift UI测试", destination: UITestView())
+            NavigationLink("搜索", destination: SearchView())
+            NavigationLink("Github", destination: GithubMainView())
         }
     }
 }
-#endif
+
 #Preview {
     MainView()
 }
