@@ -24,7 +24,7 @@ struct QrcodeView: View {
                 Section(header: Text("输入二维码文本")) {
                     TextField(/*@START_MENU_TOKEN@*/"Placeholder"/*@END_MENU_TOKEN@*/, text: self.$qrcodeContent, axis: .vertical).lineLimit(3)
                 }
-                // #if os(iOS)
+                #if os(iOS)
                 Button(action: {
                     requestCameraThenPresentScanner()
                 }) {
@@ -44,9 +44,9 @@ struct QrcodeView: View {
                 }
                 .buttonStyle(PressableButtonStyle())
                 .listRowBackground(Color.clear)
-                // #endif
+                #endif
                 if self.qrcodeContent.isNotEmpty {
-                    let qrImage=self.generateQRCode(from: EncodeUtil().urlDecode(self.qrcodeContent))
+                    let qrImage=QrcodeUtil().generateQRCode(from: EncodeUtil().urlDecode(self.qrcodeContent), scale: 5.0)
                     if qrImage == nil {
                         Text("请安装APP")
 
@@ -85,7 +85,9 @@ struct QrcodeView: View {
                         }
                         .buttonStyle(PressableButtonStyle())
                         .listRowBackground(Color.clear)
-                        Button(action: {}) {
+                        Button(action: {
+                            ShareUtil().shareImage(img: qrImage!)
+                        }) {
                             Label("分享二维码", systemImage: "square.and.arrow.up")
                                 .font(.headline)
                                 .foregroundStyle(.white)
@@ -140,24 +142,6 @@ struct QrcodeView: View {
             // [首次进入时检查权限（不弹系统框）
             hasPermission=await currentCameraAuthorizationStatus() == .authorized
         }
-    }
-
-    private func generateQRCode(from string: String, scale: CGFloat=5.0) -> PlatformImage? {
-        let context=CIContext()
-        let filter=CIFilter.qrCodeGenerator()
-        filter.setValue(Data(string.utf8), forKey: "inputMessage")
-        filter.setValue("H", forKey: "inputCorrectionLevel") // 高纠错级别
-
-        guard let output=filter.outputImage else { return nil }
-        let transformed=output.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        guard let cgImage=context.createCGImage(transformed, from: transformed.extent) else { return nil }
-
-        #if os(iOS)
-        return UIImage(cgImage: cgImage)
-        #else
-        let size=NSSize(width: transformed.extent.width, height: transformed.extent.height)
-        return NSImage(cgImage: cgImage, size: size)
-        #endif
     }
 
     // 说明：
