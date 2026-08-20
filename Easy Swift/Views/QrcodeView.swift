@@ -154,6 +154,14 @@ struct QrcodeView: View {
                         .labelStyle(.titleAndIcon)
                 }
             }
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    pasteImageFromClipboard()
+                } label: {
+                    Label("粘贴图片", systemImage: "doc.on.clipboard")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
             #endif
         }
         .onChange(of: selectedPhoto) { _, newValue in
@@ -179,52 +187,82 @@ struct QrcodeView: View {
                 }
                 return
             }
-            #if os(macOS)
-            guard let image=NSImage(data: data) else {
-                await MainActor.run {
-                    isDecoding=false
-                    showAlert(title: "读取失败", text: "无法加载所选图片")
-                }
-                return
-            }
-            var rect=CGRect(origin: .zero, size: image.size)
-            guard let cgImage=image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else {
-                await MainActor.run {
-                    isDecoding=false
-                    showAlert(title: "读取失败", text: "无法加载所选图片")
-                }
-                return
-            }
-            #else
-            guard let cgImage=UIImage(data: data)?.cgImage else {
-                await MainActor.run {
-                    isDecoding=false
-                    showAlert(title: "读取失败", text: "无法加载所选图片")
-                }
-                return
-            }
-            #endif
+            await decodeImageData(data)
+        }
+    }
 
-            let request=VNDetectBarcodesRequest()
-            request.symbologies=[.qr]
-            var payload: String?
-            var decodeError: String?
-            do {
-                try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
-                payload=request.results?.first?.payloadStringValue
-            } catch {
-                decodeError=error.localizedDescription
+    #if os(macOS)
+    // 从剪贴板粘贴图片并自动解析二维码
+    private func pasteImageFromClipboard() {
+        let pasteboard=NSPasteboard.general
+        var data=pasteboard.data(forType: .tiff)
+        if data == nil { data=pasteboard.data(forType: .png) }
+        if data == nil {
+            // 剪贴板中是图片文件
+            if let fileURL=NSURL(from: pasteboard) as URL? {
+                data=try? Data(contentsOf: fileURL)
             }
+        }
+        guard let data else {
+            showAlert(title: "剪贴板无图片", text: "请先复制一张包含二维码的图片")
+            return
+        }
+        Task { @MainActor in
+            isDecoding=true
+        }
+        Task {
+            await decodeImageData(data)
+        }
+    }
+    #endif
+
+    // 解析图片数据中的二维码（相册与剪贴板共用）
+    private func decodeImageData(_ data: Data) async {
+        #if os(macOS)
+        guard let image=NSImage(data: data) else {
             await MainActor.run {
                 isDecoding=false
-                if let payload {
-                    qrcodeContent=payload
-                    selectedPhoto=nil
-                } else if let decodeError {
-                    showAlert(title: "解析失败", text: decodeError)
-                } else {
-                    showAlert(title: "未识别到二维码", text: "所选图片中没有检测到二维码，请选择包含二维码的图片")
-                }
+                showAlert(title: "读取失败", text: "无法加载所选图片")
+            }
+            return
+        }
+        var rect=CGRect(origin: .zero, size: image.size)
+        guard let cgImage=image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else {
+            await MainActor.run {
+                isDecoding=false
+                showAlert(title: "读取失败", text: "无法加载所选图片")
+            }
+            return
+        }
+        #else
+        guard let cgImage=UIImage(data: data)?.cgImage else {
+            await MainActor.run {
+                isDecoding=false
+                showAlert(title: "读取失败", text: "无法加载所选图片")
+            }
+            return
+        }
+        #endif
+
+        let request=VNDetectBarcodesRequest()
+        request.symbologies=[.qr]
+        var payload: String?
+        var decodeError: String?
+        do {
+            try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+            payload=request.results?.first?.payloadStringValue
+        } catch {
+            decodeError=error.localizedDescription
+        }
+        await MainActor.run {
+            isDecoding=false
+            if let payload {
+                qrcodeContent=payload
+                selectedPhoto=nil
+            } else if let decodeError {
+                showAlert(title: "解析失败", text: decodeError)
+            } else {
+                showAlert(title: "未识别到二维码", text: "所选图片中没有检测到二维码，请选择包含二维码的图片")
             }
         }
     }
