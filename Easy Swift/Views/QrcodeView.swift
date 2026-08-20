@@ -18,6 +18,7 @@ struct QrcodeView: View {
     @State private var qrcodeContent: String=""
     @State private var isShowingScanner=false
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var isDecoding=false
     var body: some View {
         VStack(spacing: 16) {
             // 输入区：OS 26 玻璃材质，加大尺寸
@@ -50,6 +51,15 @@ struct QrcodeView: View {
                 Spacer()
             }
             #endif
+            if isDecoding {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("正在解析二维码...")
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
             if self.qrcodeContent.isNotEmpty {
                 let qrImage=QrcodeUtil().generateQRCode(from: EncodeUtil().urlDecode(self.qrcodeContent), scale: 5.0)
                 if qrImage == nil {
@@ -134,12 +144,14 @@ struct QrcodeView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 PhotosPicker(selection: $selectedPhoto, matching: .images) {
                     Label("相册", systemImage: "photo.on.rectangle")
+                        .labelStyle(.titleAndIcon)
                 }
             }
             #else
             ToolbarItem(placement: .automatic) {
                 PhotosPicker(selection: $selectedPhoto, matching: .images) {
                     Label("相册", systemImage: "photo.on.rectangle")
+                        .labelStyle(.titleAndIcon)
                 }
             }
             #endif
@@ -156,42 +168,63 @@ struct QrcodeView: View {
     // 从相册图片解析二维码（非二维码图片会提示）
     private func decodeQR(from item: PhotosPickerItem?) {
         guard let item else { return }
+        Task { @MainActor in
+            isDecoding=true
+        }
         Task {
             guard let data=try? await item.loadTransferable(type: Data.self) else {
-                showAlert(title: "读取失败", text: "无法加载所选图片")
+                await MainActor.run {
+                    isDecoding=false
+                    showAlert(title: "读取失败", text: "无法加载所选图片")
+                }
                 return
             }
             #if os(macOS)
             guard let image=NSImage(data: data) else {
-                showAlert(title: "读取失败", text: "无法加载所选图片")
+                await MainActor.run {
+                    isDecoding=false
+                    showAlert(title: "读取失败", text: "无法加载所选图片")
+                }
                 return
             }
             var rect=CGRect(origin: .zero, size: image.size)
             guard let cgImage=image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else {
-                showAlert(title: "读取失败", text: "无法加载所选图片")
+                await MainActor.run {
+                    isDecoding=false
+                    showAlert(title: "读取失败", text: "无法加载所选图片")
+                }
                 return
             }
             #else
             guard let cgImage=UIImage(data: data)?.cgImage else {
-                showAlert(title: "读取失败", text: "无法加载所选图片")
+                await MainActor.run {
+                    isDecoding=false
+                    showAlert(title: "读取失败", text: "无法加载所选图片")
+                }
                 return
             }
             #endif
 
             let request=VNDetectBarcodesRequest()
             request.symbologies=[.qr]
+            var payload: String?
+            var decodeError: String?
             do {
                 try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
-                if let payload=request.results?.first?.payloadStringValue {
-                    await MainActor.run {
-                        qrcodeContent=payload
-                        selectedPhoto=nil
-                    }
+                payload=request.results?.first?.payloadStringValue
+            } catch {
+                decodeError=error.localizedDescription
+            }
+            await MainActor.run {
+                isDecoding=false
+                if let payload {
+                    qrcodeContent=payload
+                    selectedPhoto=nil
+                } else if let decodeError {
+                    showAlert(title: "解析失败", text: decodeError)
                 } else {
                     showAlert(title: "未识别到二维码", text: "所选图片中没有检测到二维码，请选择包含二维码的图片")
                 }
-            } catch {
-                showAlert(title: "解析失败", text: error.localizedDescription)
             }
         }
     }
