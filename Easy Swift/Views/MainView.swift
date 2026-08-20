@@ -30,7 +30,7 @@ struct MainView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220)
                 .toolbar {
                     ToolbarItem(placement: .automatic) {
-                        NavigationLink(destination: SettingView()) {
+                        SettingsLink {
                             Image(systemName: "gear")
                         }
                     }

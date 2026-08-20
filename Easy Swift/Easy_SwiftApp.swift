@@ -13,5 +13,11 @@ struct Easy_SwiftApp: App {
         WindowGroup {
             ContentView()
         }
+        #if os(macOS)
+        // 标准"设置…"（Cmd+,）菜单与独立设置窗口
+        Settings {
+            SettingView()
+        }
+        #endif
     }
 }
