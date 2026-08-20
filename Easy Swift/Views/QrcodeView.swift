@@ -5,7 +5,6 @@
 //  Created by zzh on 2024/11/24.
 //
 import AVFoundation
-import CoreImage.CIFilterBuiltins
 import SwiftUI
 import SwiftUtils
 import Vision
@@ -19,94 +18,100 @@ struct QrcodeView: View {
     @State private var hasPermission=false
     @State private var isShowingScanner=false
     var body: some View {
-        VStack {
-            Form {
-                Section(header: Text("输入二维码文本")) {
-                    TextField(/*@START_MENU_TOKEN@*/"Placeholder"/*@END_MENU_TOKEN@*/, text: self.$qrcodeContent, axis: .vertical).lineLimit(3)
-                }
-                #if os(iOS)
+        VStack(spacing: 16) {
+            // 输入区：OS 26 玻璃材质，加大尺寸
+            TextField("输入二维码文本", text: self.$qrcodeContent, axis: .vertical)
+                .lineLimit(3)
+                .font(.title3)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+                .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                .padding(.horizontal)
+            #if os(iOS)
+            HStack {
+                Spacer()
                 Button(action: {
                     requestCameraThenPresentScanner()
                 }) {
-                    Label("扫一扫", systemImage: "qrcode.viewfinder")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(red: 0.04, green: 0.53, blue: 1.0), .blue],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .shadow(color: .blue.opacity(0.28), radius: 8, y: 4)
+                    Label {
+                        Text("扫一扫")
+                    } icon: {
+                        Image(systemName: "qrcode.viewfinder")
+                            .foregroundStyle(.tint)
+                            .padding(5)
+                            .background(Circle().fill(.white))
+                    }
                 }
-                .buttonStyle(PressableButtonStyle())
-                .listRowBackground(Color.clear)
-                #endif
-                if self.qrcodeContent.isNotEmpty {
-                    let qrImage=QrcodeUtil().generateQRCode(from: EncodeUtil().urlDecode(self.qrcodeContent), scale: 5.0)
-                    if qrImage == nil {
-                        Text("请安装APP")
+                .buttonStyle(.glassProminent)
+                .controlSize(.large)
+                Spacer()
+            }
+            #endif
+            if self.qrcodeContent.isNotEmpty {
+                let qrImage=QrcodeUtil().generateQRCode(from: EncodeUtil().urlDecode(self.qrcodeContent), scale: 5.0)
+                if qrImage == nil {
+                    Text("请安装APP")
 
-                    } else {
-                        // [UPDATED macOS] 跨平台显示二维码图片
+                } else {
+                    // 二维码与操作按钮移出 Form：去掉分割线与行背景，整体水平居中
+                    HStack {
+                        Spacer()
                         #if os(iOS)
                         Image(uiImage: qrImage!)
                             .interpolation(.none) // 保持二维码边缘锐利
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .padding(.horizontal, 20)
                             .frame(width: 240, height: 240)
                         #elseif os(macOS)
                         Image(nsImage: qrImage!)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .padding(.horizontal, 20)
+                            .frame(width: 240, height: 240)
                         #endif
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                    HStack {
+                        Spacer()
                         Button(action: {
                             ClipboardUtil().setString(qrcodeContent)
-
                         }) {
-                            Label("复制文字", systemImage: "arrow.right.page.on.clipboard")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity, minHeight: 56)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.04, green: 0.53, blue: 1.0), .blue],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .shadow(color: .blue.opacity(0.28), radius: 8, y: 4)
+                            Label {
+                                Text("复制文字")
+                            } icon: {
+                                Image(systemName: "arrow.right.page.on.clipboard")
+                                    .foregroundStyle(.tint)
+                                    .padding(5)
+                                    .background(Circle().fill(.white))
+                            }
                         }
-                        .buttonStyle(PressableButtonStyle())
-                        .listRowBackground(Color.clear)
+                        .buttonStyle(.glassProminent)
+                        .controlSize(.large)
+                        Spacer()
+                    }
+                    HStack {
+                        Spacer()
                         Button(action: {
                             ShareUtil().shareImage(img: qrImage!)
                         }) {
-                            Label("分享二维码", systemImage: "square.and.arrow.up")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity, minHeight: 56)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.04, green: 0.53, blue: 1.0), .blue],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .shadow(color: .blue.opacity(0.28), radius: 8, y: 4)
+                            Label {
+                                Text("分享二维码")
+                            } icon: {
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundStyle(.tint)
+                                    .padding(5)
+                                    .background(Circle().fill(.white))
+                            }
                         }
-                        .buttonStyle(PressableButtonStyle())
-                        .listRowBackground(Color.clear)
+                        .buttonStyle(.glassProminent)
+                        .controlSize(.large)
+                        Spacer()
                     }
                 }
             }
+            Spacer()
         }
         #if os(iOS)
         .sheet(isPresented: $isShowingScanner) {
@@ -149,87 +154,42 @@ struct QrcodeView: View {
     //  - Info.plist 需包含 NSCameraUsageDescription（iOS/macOS 都需要）
 
     private func requestCameraPermissions() {
-        Task {
-            let status=await currentCameraAuthorizationStatus()
-            switch status {
-            case .authorized:
-                await MainActor.run { hasPermission=true }
-
-            case .notDetermined:
-                // 首次请求：会弹系统权限弹窗
-                let granted=await requestAccess()
-                await MainActor.run {
-                    hasPermission=granted
-                    if !granted {
-                        alertTitle="获取相机权限失败"
-                        alertText="用户拒绝授权"
-                        showingAlert=true
-                    }
-                }
-
-            case .denied, .restricted:
-                await MainActor.run {
-                    hasPermission=false
-                    alertTitle="相机权限不可用"
-                    alertText=(status == .denied) ? "用户拒绝授权" : "系统限制"
-                    showingAlert=true
-                }
-
-            @unknown default:
-                await MainActor.run {
-                    hasPermission=false
-                    alertTitle="未知权限状态"
-                    alertText="请检查系统设置"
-                    showingAlert=true
-                }
+        CameraUtil().checkCameraPermissions(success: {
+            Task { @MainActor in
+                self.hasPermission=true
             }
-        }
+        }, fail: { message in
+            Task { @MainActor in
+                self.hasPermission=false
+                self.alertTitle="相机权限不可用"
+                self.alertText=message
+                self.showingAlert=true
+            }
+        })
     }
 
     #if os(iOS)
     private func requestCameraThenPresentScanner() {
-        Task {
-            let status=await currentCameraAuthorizationStatus()
-
-            switch status {
-            case .authorized:
-                await MainActor.run {
-                    guard DataScannerViewController.isSupported,
-                          DataScannerViewController.isAvailable
-                    else {
-                        alertTitle="扫码不可用"
-                        alertText="当前设备不支持系统扫码，或相机暂时不可用。"
-                        showingAlert=true
-                        return
-                    }
-                    isShowingScanner=true
+        CameraUtil().checkCameraPermissions(success: {
+            Task { @MainActor in
+                guard DataScannerViewController.isSupported,
+                      DataScannerViewController.isAvailable
+                else {
+                    self.alertTitle="扫码不可用"
+                    self.alertText="当前设备不支持系统扫码，或相机暂时不可用。"
+                    self.showingAlert=true
+                    return
                 }
-
-            case .notDetermined:
-                let granted=await requestAccess()
-                await MainActor.run {
-                    hasPermission=granted
-                    if granted {
-                        requestCameraThenPresentScanner()
-                    } else {
-                        alertTitle="获取相机权限失败"
-                        alertText="请在系统设置中允许相机访问。"
-                        showingAlert=true
-                    }
-                }
-
-            case .denied, .restricted:
-                await MainActor.run {
-                    hasPermission=false
-                    alertTitle="相机权限不可用"
-                    alertText="请在系统设置中允许相机访问。"
-                    showingAlert=true
-                }
-
-            @unknown default:
-                break
+                self.isShowingScanner=true
             }
-        }
+        }, fail: { message in
+            Task { @MainActor in
+                self.hasPermission=false
+                self.alertTitle="相机权限不可用"
+                self.alertText=message
+                self.showingAlert=true
+            }
+        })
     }
     #endif
 
@@ -237,25 +197,6 @@ struct QrcodeView: View {
     private func currentCameraAuthorizationStatus() async -> AVAuthorizationStatus {
         // iOS / macOS 通用
         AVCaptureDevice.authorizationStatus(for: .video)
-    }
-
-    // 发起授权请求（会触发系统弹窗）
-    private func requestAccess() async -> Bool {
-        await withCheckedContinuation { cont in
-            AVCaptureDevice.requestAccess(for: .video) { granted in
-                cont.resume(returning: granted)
-            }
-        }
-    }
-}
-
-private struct PressableButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .brightness(configuration.isPressed ? -0.08 : 0)
-            .opacity(configuration.isPressed ? 0.9 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
