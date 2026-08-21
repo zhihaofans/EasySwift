@@ -29,6 +29,7 @@ struct ClipboardContentView: View {
     @Query(sort: \ClipItemDataModel.create_time, order: .reverse) private var clips: [ClipItemDataModel]
     @State private var clipList=[ClipItemDataModel]()
     @State private var clipContentList=[String]()
+    @State private var editingItem: ClipItemDataModel?
     var body: some View {
         VStack {
             // 下面是新代码SwiftData
@@ -54,16 +55,50 @@ struct ClipboardContentView: View {
                     Spacer()
                 }
             } else {
+                #if os(macOS)
+                // macOS 大屏幕：卡片网格，一行多个
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 12)], spacing: 12) {
+                        ForEach(clips) { item in
+                            Button {
+                                editingItem=item
+                            } label: {
+                                DoubleTextItemView(item.text)
+                                    .padding(14)
+                                    .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
+                                    .glassEffect(.regular, in: .rect(cornerRadius: 12))
+                            }
+                            .buttonStyle(.plain)
+                            // 右键删除
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deleteItem(item)
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                }
+                #else
+                // iOS：NavigationLink push（toolbar 按钮可见），不用 sheet
                 List(clips) { item in
                     ClipItemView(path: clipList, item: item)
                         .swipeActions {}
-                }.onChange(of: clips) { _, _ in
-                    // 调试日志：打印系统剪贴板（走 SwiftUtils）
-                    debugPrint("当前剪贴板内容：\(ClipboardUtil().getString())")
-                    debugPrint("当前 clipList 数据：\(clipList)")
-                    clipContentList=clips.map { $0.text }
                 }
+                #endif
             }
+        }
+        .onChange(of: clips) { _, _ in
+            // 调试日志：打印系统剪贴板（走 SwiftUtils）
+            debugPrint("当前剪贴板内容：\(ClipboardUtil().getString())")
+            debugPrint("当前 clipList 数据：\(clipList)")
+            clipContentList=clips.map { $0.text }
+        }
+        // 编辑页用 sheet 呈现：点完成保存并返回列表（macOS/iOS 一致）
+        .sheet(item: $editingItem) { item in
+            ClipboardEditorView(item: item)
         }
         .showTextAlert(alertTitle, alertText, isPresented: $showingAlert) {
             self.alertTitle=""
@@ -131,6 +166,17 @@ struct ClipboardContentView: View {
         }
     }
 
+    // 删除条目（macOS 卡片右键删除）
+    private func deleteItem(_ item: ClipItemDataModel) {
+        modelContext.delete(item)
+        do {
+            try modelContext.save()
+            debugPrint("success to delete context")
+        } catch {
+            debugPrint("Failed to delete context: \(error)")
+        }
+    }
+
     private func addNewItem(_ text: String) {
         // 1. 确保新任务的标题不是空的
         guard !text.isEmpty else { return }
@@ -180,11 +226,11 @@ private struct ClipItemView: View {
     }
 
     var body: some View {
-//        NavigationLink(destination: EditView(path: path, editNoteItem: item)) {
-
-        NavigationLink(destination: ClipboardEditorView(path: path, item: item)) {
+        // iOS：NavigationLink push 打开编辑（toolbar 按钮可见）
+        NavigationLink(destination: ClipboardEditorView(item: item)) {
             DoubleTextItemView(item.text)
-        }.swipeActions(allowsFullSwipe: false) {
+        }
+        .swipeActions(allowsFullSwipe: false) {
             // 滑动菜单中的操作按钮
             Button(role: .destructive) {
                 deleteItem()
@@ -193,7 +239,6 @@ private struct ClipItemView: View {
                 Label("删除", systemImage: "trash")
             }
         }
-//        }
     }
 
     private func deleteItem() {
@@ -213,22 +258,18 @@ private struct ClipItemView: View {
 
 private struct ClipboardEditorView: View {
     private let item: ClipItemDataModel
-    @State private var path=[ClipItemDataModel]()
+    // 保存时用 id 重新 fetch，避免直接访问传入对象（macOS 下其 context 可能失效导致崩溃）
+    private let itemID: UUID
     @State private var clipContent: String
+    @State private var hasSaved=false
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    init(path: [ClipItemDataModel], item: ClipItemDataModel?=nil) {
-        let nowTime=DateUtil().getTimestamp()
-        self.path=path
-        self.item=item ?? ClipItemDataModel(
-            id: UUID(),
-            text: "",
-            create_time: nowTime,
-            update_time: nowTime
-        )
-        _clipContent=State(initialValue: self.item.text)
+    init(item: ClipItemDataModel) {
+        self.item=item
+        self.itemID=item.id
+        _clipContent=State(initialValue: item.text)
     }
 
     var body: some View {
@@ -298,19 +339,31 @@ private struct ClipboardEditorView: View {
                 .buttonStyle(.glassProminent)
             }
         }
-        .onDisappear { saveText() }
     }
 
-    // MARK: 保存文本
+    // MARK: 保存文本（编辑已存在对象：只改属性 + save，勿重复 insert）
 
     private func saveText() {
-        guard clipContent != item.text else { return }
-        item.text=clipContent
-        item.update_time=DateUtil().getTimestamp()
-        modelContext.insert(item)
-        path=[item]
-        do { try modelContext.save() }
-        catch { debugPrint("Failed to save context: \(error)") }
+        debugPrint("[ClipboardEditorView] saveText start, hasSaved=\(hasSaved)")
+        guard !hasSaved else { debugPrint("[ClipboardEditorView] 已保存过，跳过"); return }
+        hasSaved=true
+        do {
+            // 用 itemID 从 modelContext 重新获取最新对象（context 有效，属性访问安全）
+            let predicate=#Predicate<ClipItemDataModel> { $0.id == itemID }
+            guard let latest=try modelContext.fetch(FetchDescriptor<ClipItemDataModel>(predicate: predicate)).first else {
+                debugPrint("[ClipboardEditorView] 未找到对象 id=\(itemID)")
+                return
+            }
+            debugPrint("[ClipboardEditorView] fetch 成功，读取 latest.text...")
+            guard clipContent != latest.text else { debugPrint("[ClipboardEditorView] 内容未变，跳过"); return }
+            latest.text=clipContent
+            latest.update_time=DateUtil().getTimestamp()
+            debugPrint("[ClipboardEditorView] 调用 modelContext.save()...")
+            try modelContext.save()
+            debugPrint("[ClipboardEditorView] save 成功")
+        } catch {
+            debugPrint("Failed to save context: \(error)")
+        }
     }
 
     // MARK: 复制到系统剪贴板（走 SwiftUtils）
