@@ -13,6 +13,8 @@ import AppKit
 #endif
 
 struct GithubMainView: View {
+    @State private var showingSetting = false
+
     var body: some View {
         TabView {
             GithubTrendingView()
@@ -23,26 +25,34 @@ struct GithubMainView: View {
                 .tabItem {
                     Label("收藏", systemImage: "star.fill")
                 }
-            GithubMyView()
+            GithubMyView(showingSetting: $showingSetting)
                 .tabItem {
                     Label("我的", systemImage: "person.fill")
                 }
         }
-        .navigationTitle("Github")
+        .setNavigationTitle("Github")
         .toolbar {
             #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: GithubSettingView()) {
+                Button {
+                    showingSetting = true
+                } label: {
                     Image(systemName: "gear")
                 }
             }
             #else
             ToolbarItem(placement: .automatic) {
-                NavigationLink(destination: GithubSettingView()) {
+                Button {
+                    showingSetting = true
+                } label: {
                     Image(systemName: "gear")
                 }
             }
             #endif
+        }
+        // 设置页用 sheet 呈现，避免 push/pop 影响 detail 导航状态与 TabView 选中
+        .sheet(isPresented: $showingSetting) {
+            GithubSettingView()
         }
     }
 }
@@ -51,6 +61,20 @@ enum DateType: String, CaseIterable, Identifiable {
     case day, week, month
     var id: Self {
         self
+    }
+
+    /// 起始日期（用于 created:> 过滤：今日=1天前、本周=7天前、本月=30天前）
+    var sinceDateString: String {
+        let daysAgo: Int
+        switch self {
+        case .day: daysAgo=1
+        case .week: daysAgo=7
+        case .month: daysAgo=30
+        }
+        let date=Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+        let formatter=DateFormatter()
+        formatter.dateFormat="yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 }
 
@@ -79,9 +103,11 @@ struct GithubTrendingView: View {
                     Text("本周").tag(DateType.week)
                     Text("本月").tag(DateType.month)
                 } label: {
-                    Text("时间(暂不支持修改)")
+                    Text("时间")
                 }
-                .disabled(true)
+                .onChange(of: selectedDate) { _, _ in
+                    self.loadingTrendingData()
+                }
                 #if os(iOS)
                 .pickerStyle(.segmented)
                 #else
@@ -109,8 +135,35 @@ struct GithubTrendingView: View {
             .padding(.horizontal)
             .padding(.vertical, 8)
 
-            // 结果列表：官方 trending 卡片式
+            // 结果列表：官方 trending 卡片式（macOS 网格一行多个，iOS 单列）
             ScrollView {
+                #if os(macOS)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 12)], spacing: 12) {
+                    if isLoadingError {
+                        Text("错误:\(errorText)")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    } else if trendingList.isEmpty {
+                        ProgressView()
+                            .padding(.top, 40)
+                    } else {
+                        ForEach(trendingList, id: \.id) { item in
+                            GithubRepoCardView(item: item)
+                                .onClick {
+                                    #if os(iOS)
+                                    safariUrlString = item.html_url
+                                    isShowingSafari = true
+                                    #else
+                                    if let url = URL(string: item.html_url) {
+                                        NSWorkspace.shared.open(url)
+                                    }
+                                    #endif
+                                }
+                        }
+                    }
+                }
+                .padding()
+                #else
                 LazyVStack(spacing: 12) {
                     if isLoadingError {
                         Text("错误:\(errorText)")
@@ -123,7 +176,6 @@ struct GithubTrendingView: View {
                         ForEach(trendingList, id: \.id) { item in
                             GithubRepoCardView(item: item)
                                 .onClick {
-                                    // iOS 走 Safari 预览；macOS 用默认浏览器
                                     #if os(iOS)
                                     safariUrlString = item.html_url
                                     isShowingSafari = true
@@ -138,6 +190,7 @@ struct GithubTrendingView: View {
                     }
                 }
                 .padding(.vertical, 8)
+                #endif
             }
         }
         .onAppear {
@@ -154,7 +207,7 @@ struct GithubTrendingView: View {
         DispatchQueue.main.async {
             trendingList.removeAll()
         }
-        GithubTrendingService().getTrendingList(language: selectedLanguage.rawValue) { result in
+        GithubTrendingService().getTrendingList(language: selectedLanguage.rawValue, sinceDate: selectedDate.sinceDateString) { result in
             trendingList = result.items
         } fail: { err in
             debugPrint(err)
@@ -249,6 +302,33 @@ struct GithubStarsView: View {
         VStack {
             if UserName.isNotEmpty {
                 ScrollView {
+                    #if os(macOS)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 12)], spacing: 12) {
+                        if isLoadingError {
+                            Text("错误:\(errorText)")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                        } else if resultList.isEmpty {
+                            ProgressView()
+                                .padding(.top, 40)
+                        } else {
+                            ForEach(resultList, id: \.id) { item in
+                                GithubRepoCardView(item: item)
+                                    .onClick {
+                                        #if os(iOS)
+                                        safariUrlString = item.html_url
+                                        isShowingSafari = true
+                                        #else
+                                        if let url = URL(string: item.html_url) {
+                                            NSWorkspace.shared.open(url)
+                                        }
+                                        #endif
+                                    }
+                            }
+                        }
+                    }
+                    .padding()
+                    #else
                     LazyVStack(spacing: 12) {
                         if isLoadingError {
                             Text("错误:\(errorText)")
@@ -275,6 +355,7 @@ struct GithubStarsView: View {
                         }
                     }
                     .padding(.vertical, 8)
+                    #endif
                 }
                 #if os(iOS)
                 .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)

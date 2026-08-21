@@ -24,8 +24,13 @@ class GithubTrendingService {
         }
     }
 
-    func getTrendingList(language: String = "Swift", callback: @escaping (GithubTrendingResult)->Void, fail: @escaping (String)->Void) {
-        let url = "https://api.github.com/search/repositories?q=language:\(language)&sort=stars&order=desc"
+    func getTrendingList(language: String = "Swift", sinceDate: String = "", callback: @escaping (GithubTrendingResult)->Void, fail: @escaping (String)->Void) {
+        var query="q=language:\(language)"
+        // 时间过滤：created:>{起始日期}（模拟官方 trending 的 since 语义）
+        if sinceDate.isNotEmpty {
+            query += "+created:>\(sinceDate)"
+        }
+        let url = "https://api.github.com/search/repositories?\(query)&sort=stars&order=desc"
         http.get(url) { value in
             if value.isEmpty {
                 fail("getTrendingList.result.isEmpty")

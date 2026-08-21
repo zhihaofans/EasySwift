@@ -13,6 +13,7 @@ import SwiftUtils
 struct GithubSettingView: View {
     @AppStorage("github_username") var GithubUsername: String = ""
     @AppStorage("github_access_token") var GithubAccessToken: String = ""
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
@@ -46,6 +47,19 @@ struct GithubSettingView: View {
             .padding(.vertical, 8)
         }
         .setNavigationTitle("Github 设置")
+        .toolbar {
+            #if os(macOS)
+            // macOS sheet 显式关闭按钮
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    dismiss()
+                } label: {
+                    Label("完成", systemImage: "xmark.circle")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+            #endif
+        }
     }
 
     @ViewBuilder

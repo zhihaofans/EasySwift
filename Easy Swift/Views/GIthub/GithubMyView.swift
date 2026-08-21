@@ -9,8 +9,13 @@ import SwiftUI
 import SwiftUtils
 
 struct GithubMyView: View {
+    @Binding var showingSetting: Bool
     private let LoginService = GithubLoginService()
     @State private var isLogin: Bool = false
+
+    init(showingSetting: Binding<Bool> = .constant(false)) {
+        _showingSetting = showingSetting
+    }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -37,7 +42,9 @@ struct GithubMyView: View {
                     Text("未登录")
                         .font(.title2)
                         .foregroundStyle(.secondary)
-                    NavigationLink(destination: GithubSettingView()) {
+                    Button {
+                        showingSetting = true
+                    } label: {
                         Label("去设置页配置 Token", systemImage: "gear")
                     }
                     .buttonStyle(.glassProminent)
@@ -46,7 +53,7 @@ struct GithubMyView: View {
                 Spacer()
             }
         }
-        .navigationTitle("我的Github")
+        .setNavigationTitle("我的Github")
         .onAppear {
             isLogin = LoginService.isLogin()
         }
