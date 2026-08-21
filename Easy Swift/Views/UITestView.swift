@@ -2,165 +2,140 @@
 //  UITestView.swift
 //  Easy Swift
 //
+//  原生 SwiftUI 常见组件展示页：统一玻璃卡片分组，跨平台。
+//
 //  Created by zzh on 2025/1/3.
 //
 
 import SwiftUI
 import SwiftUtils
 
-// 仅在 macOS 使用 AppKit（做系统分享）
-#if os(macOS)
-import AppKit
-#endif
-
 struct UITestView: View {
-    @State private var isShareSheetPresented = false
-    @State private var textToShare = "这是我要分享的一段文本！"
+    @State private var toggleOn=false
+    @State private var sliderValue=0.5
+    @State private var stepperValue=0
+    @State private var color=Color.blue
+    @State private var date=Date()
+    @State private var text=""
+    @State private var pickerValue=0
+    @State private var progressValue=0.6
+    @State private var showAlert=false
+
+    private let pickerOptions=["选项一", "选项二", "选项三"]
+
     var body: some View {
-        VStack {
-            NavigationView {
-                List {
-                    Button(action: {
-                        isShareSheetPresented = true
-                    }) {
-                        Text("调用系统分享")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                componentSection("按钮 Button") {
+                    HStack(spacing: 12) {
+                        Button("默认") {}
+                        Button("玻璃") {}
+                            .buttonStyle(.glassProminent)
+                        Button(role: .destructive) {} label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                        Button {
+                            showAlert=true
+                        } label: {
+                            Label("弹窗", systemImage: "bell")
+                        }
                     }
-                    // iOS 仍走你现有的分享；macOS 用 NSSharingServicePicker
-                    #if os(iOS)
-                    .showShareTextView(textToShare, isPresented: $isShareSheetPresented)
-                    #elseif os(macOS)
-                    .macShareTextView(textToShare, isPresented: $isShareSheetPresented) // 定义见下方
-                    #endif
+                }
 
-                    NavigationLink("昨天", destination: DateTextView())
+                componentSection("开关 Toggle") {
+                    Toggle("启用功能", isOn: $toggleOn)
+                }
+
+                componentSection("滑块 Slider") {
+                    Slider(value: $sliderValue)
+                    Text("当前值：\(Int(sliderValue * 100))%")
+                        .foregroundStyle(.secondary)
+                }
+
+                componentSection("步进器 Stepper") {
+                    Stepper("数量：\(stepperValue)", value: $stepperValue, in: 0...10)
+                }
+
+                componentSection("分段选择 Picker") {
+                    Picker("选项", selection: $pickerValue) {
+                        ForEach(0..<pickerOptions.count, id: \.self) { i in
+                            Text(pickerOptions[i]).tag(i)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                componentSection("输入框 TextField") {
+                    TextField("请输入内容", text: $text)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                componentSection("日期选择 DatePicker") {
+                    DatePicker("选择日期", selection: $date, displayedComponents: [.date])
+                }
+
+                componentSection("颜色选择 ColorPicker") {
+                    ColorPicker("选择颜色", selection: $color)
+                }
+
+                componentSection("进度 ProgressView") {
+                    VStack(spacing: 12) {
+                        ProgressView(value: progressValue)
+                            .progressViewStyle(.linear)
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                    }
+                }
+
+                componentSection("链接 Link") {
+                    Link(destination: URL(string: "https://www.apple.com")!) {
+                        Label("访问 Apple 官网", systemImage: "safari")
+                    }
+                }
+
+                componentSection("图标 Image") {
+                    HStack(spacing: 16) {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(.yellow)
+                        Image(systemName: "heart.fill")
+                            .foregroundStyle(.red)
+                        Image(systemName: "bolt.fill")
+                            .foregroundStyle(.orange)
+                        Image(systemName: "leaf.fill")
+                            .foregroundStyle(.green)
+                        Image(systemName: "drop.fill")
+                            .foregroundStyle(.blue)
+                    }
+                    .font(.title2)
+                }
+
+                componentSection("标签 Label") {
+                    Label("这是一个标签", systemImage: "tag")
+                    Label("带副标题", systemImage: "info.circle")
+                        .foregroundStyle(.secondary)
                 }
             }
+            .padding(.vertical, 8)
         }
-        // iOS 和 macOS 的导航标题分别适配
-        #if os(iOS)
-        .setNavigationTitle(AppUtil().getAppName())
-        #elseif os(macOS)
-        .navigationTitle(AppUtil().getAppName())
-        #endif
-        .toolbar {
-            // iOS 的工具栏放右侧导航栏；macOS 用 .automatic
-            #if os(iOS)
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: Text("Hello, World!")) {
-                    Image(systemName: "person")
-                }
-            }
-            #elseif os(macOS)
-            ToolbarItem(placement: .automatic) {
-                NavigationLink(destination: Text("Hello, World!")) {
-                    Image(systemName: "person")
-                }
-            }
-            #endif
-
-            // 第二个按钮同样分平台放置
-            #if os(iOS)
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: SettingView()) {
-                    Image(systemName: "gear")
-                }
-            }
-            #elseif os(macOS)
-            ToolbarItem(placement: .automatic) {
-                NavigationLink(destination: SettingView()) {
-                    Image(systemName: "gear")
-                }
-            }
-            #endif
-        }
-    }
-}
-
-struct DateTextView: View {
-    @State private var selectedDate = Date()
-    @State private var resultText = "不是昨天"
-    var body: some View {
-        DatePicker("请选择日期", selection: $selectedDate, displayedComponents: [.date])
-        // 日期样式：iOS 用轮盘；macOS 用文本域（你也可以换成 .graphical）
-        #if os(iOS)
-            .datePickerStyle(.wheel)
-        #elseif os(macOS)
-            .datePickerStyle(.field)
-        #endif
-            .padding().onChange(of: selectedDate) { _, _ in
-                if isYesterday(nowDate: Date(), date: selectedDate) {
-                    resultText = "昨天"
-                } else {
-                    resultText = "不是昨天"
-                }
-            }
-
-        Text("你选择的日期是: \(selectedDate, formatter: dateFormatter)")
-            .padding()
-
-        Text(resultText)
-            .padding()
-    }
-
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter
-    }
-
-    func isYesterday(nowDate: Date, date: Date) -> Bool {
-        let calendar = Calendar.current
-        if calendar.isDate(date, inSameDayAs: nowDate) {
-            return false
-        }
-        let startOfDay1 = calendar.startOfDay(for: nowDate)
-        let startOfDay2 = calendar.startOfDay(for: date)
-        // 如果 date1 是 date2 的前一天
-        let result = calendar.isDate(startOfDay1, inSameDayAs: calendar.date(byAdding: .day, value: 1, to: startOfDay2)!)
-        debugPrint(nowDate)
-        debugPrint(date)
-        debugPrint(result)
-        return result
-    }
-}
-
-// MARK: - macOS 分享：NSSharingServicePicker 封装
-
-#if os(macOS)
-private struct MacSharingPicker: NSViewRepresentable {
-    @Binding var isPresented: Bool
-    var items: [Any]
-
-    func makeNSView(context: Context) -> NSView {
-        NSView(frame: .zero)
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        guard isPresented else { return }
-        // 在当前 NSView 上弹出系统分享面板
-        let picker = NSSharingServicePicker(items: items)
-        picker.show(relativeTo: nsView.bounds, of: nsView, preferredEdge: .minY)
-        // 弹出后立刻复位绑定值，防止重复弹出
-        DispatchQueue.main.async {
-            self.isPresented = false
+        .setNavigationTitle("SwiftUI 组件")
+        .alert("提示", isPresented: $showAlert) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text("这是一个系统弹窗示例")
         }
     }
-}
 
-/// 一个易用的修饰符，和 iOS 的 .showShareTextView 使用体验对齐
-private struct MacShareTextModifier: ViewModifier {
-    let text: String
-    @Binding var isPresented: Bool
-
-    func body(content: Content) -> some View {
-        content.background(
-            MacSharingPicker(isPresented: $isPresented, items: [text])
-                .frame(width: 0, height: 0) // 不占布局
-        )
+    // 组件分组卡片（玻璃材质）
+    @ViewBuilder
+    private func componentSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        .padding(.horizontal)
     }
 }
-
-#endif
-// #Preview {
-//    UITestView()
-// }
