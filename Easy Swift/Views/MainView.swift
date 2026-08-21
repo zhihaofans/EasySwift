@@ -46,6 +46,7 @@ struct MainView: View {
     private func mainList() -> some View {
         List {
             NavigationLink("二维码", destination: QrcodeView())
+            NavigationLink("链接解析", destination: LinkParserView())
             NavigationLink("剪贴板", destination: ClipboardView())
             NavigationLink("Swift UI测试", destination: UITestView())
             NavigationLink("搜索", destination: SearchView())
