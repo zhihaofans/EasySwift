@@ -34,36 +34,32 @@ struct ClipboardContentView: View {
             // 下面是新代码SwiftData
             // 显示所有任务
             if clips.isEmpty {
-//                NavigationLink(destination: ClipboardEditorView(path: clipList)) {
-//                    Button(action: {}) {
-//                        Text("随便记一下")
-//                            .padding()
-//                            .background(Color.blue)
-//                            .foregroundColor(.white)
-//                            .cornerRadius(8)
-//                    }
-//                }
-                Button(action: {
-                    showingMenu=true
-                }) {
-                    Text("随便记一下")
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+                // 空状态：玻璃按钮，居中
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showingMenu=true
+                    }) {
+                        Label {
+                            Text("随便记一下")
+                        } icon: {
+                            Image(systemName: "square.and.pencil")
+                                .foregroundStyle(.tint)
+                                .padding(5)
+                                .background(Circle().fill(.white))
+                        }
+                    }
+                    .buttonStyle(.glassProminent)
+                    .controlSize(.large)
+                    Spacer()
                 }
             } else {
                 List(clips) { item in
                     ClipItemView(path: clipList, item: item)
                         .swipeActions {}
                 }.onChange(of: clips) { _, _ in
-                    // [UPDATED macOS] 跨平台打印系统剪贴板
-                    #if os(iOS)
-                    let clipStr=UIPasteboard.general.string ?? "空"
-                    #else
-                    let clipStr=NSPasteboard.general.string(forType: .string) ?? "空"
-                    #endif
-                    debugPrint("当前剪贴板内容：\(clipStr)")
+                    // 调试日志：打印系统剪贴板（走 SwiftUtils）
+                    debugPrint("当前剪贴板内容：\(ClipboardUtil().getString())")
                     debugPrint("当前 clipList 数据：\(clipList)")
                     clipContentList=clips.map { $0.text }
                 }
@@ -165,19 +161,12 @@ struct ClipboardContentView: View {
     }
 
     private func addFromClip() {
-        #if os(iOS)
-        if let clipboardContent=UIPasteboard.general.string {
-            addNewItem(clipboardContent)
+        let content=ClipboardUtil().getString()
+        if content.isNotEmpty {
+            addNewItem(content)
         } else {
             debugPrint("剪贴板内容为空或无法转换为字符串")
         }
-        #else
-        if let clipboardContent=NSPasteboard.general.string(forType: .string) {
-            addNewItem(clipboardContent)
-        } else {
-            debugPrint("剪贴板内容为空或无法转换为字符串")
-        }
-        #endif
     }
 }
 
@@ -243,44 +232,61 @@ private struct ClipboardEditorView: View {
     }
 
     var body: some View {
-        Form {
-            Section("内容") {
-                TextEditor(text: $clipContent)
-                    .frame(minHeight: 200)
-                    .textSelection(.enabled)
-                    .disableAutocorrection(true)
-            }
+        VStack(alignment: .leading, spacing: 16) {
+            // 内容编辑：OS 26 玻璃材质
+            TextEditor(text: $clipContent)
+                .font(.body)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .frame(maxWidth: .infinity, minHeight: 200)
+                .glassEffect(.regular, in: .rect(cornerRadius: 12))
+                .padding(.horizontal)
 
-            Section("统计") {
+            // 统计：字数 / 行数
+            HStack(spacing: 24) {
                 LabeledContent("字数", value: "\(clipContent.count)")
                 LabeledContent("行数", value: "\(clipContent.split(whereSeparator: \.isNewline).count)")
             }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal)
+
+            Spacer()
         }
-        .formStyle(.grouped)
-        .setNavigationTitle(clipContent.count.toString)
+        .padding(.top, 8)
+        .setNavigationTitle("编辑")
         .toolbar {
             #if os(iOS)
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 // 系统分享
-                ShareLink(item: clipContent) { Image(systemName: "square.and.arrow.up") }
-                // 系统粘贴
-                PasteButton(payloadType: String.self) { items in
-                    clipContent += items.joined(separator: "\n")
+                ShareLink(item: clipContent) {
+                    Label("分享", systemImage: "square.and.arrow.up")
                 }
-                // 复制（用平台 API 实现，替代不可用的 CopyButton）
+                // 粘贴（PasteButton 无自定义 label，改用按钮实现，统一风格）
                 Button {
-                    copyToClipboard()
-                } label: { Image(systemName: "doc.on.doc") }
+                    pasteFromClipboard()
+                } label: {
+                    Label("粘贴", systemImage: "doc.on.clipboard")
+                }
+          
             }
             #else
             ToolbarItemGroup(placement: .automatic) {
-                ShareLink(item: clipContent) { Image(systemName: "square.and.arrow.up") }
-                PasteButton(payloadType: String.self) { items in
-                    clipContent += items.joined(separator: "\n")
+                ShareLink(item: clipContent) {
+                    Label("分享", systemImage: "square.and.arrow.up")
+                        .labelStyle(.titleAndIcon)
+                }
+                Button {
+                    pasteFromClipboard()
+                } label: {
+                    Label("粘贴", systemImage: "doc.on.clipboard")
+                        .labelStyle(.titleAndIcon)
                 }
                 Button {
                     copyToClipboard()
-                } label: { Image(systemName: "doc.on.doc") }
+                } label: {
+                    Label("复制", systemImage: "doc.on.doc")
+                        .labelStyle(.titleAndIcon)
+                }
             }
             #endif
 
@@ -289,6 +295,7 @@ private struct ClipboardEditorView: View {
                     saveText()
                     dismiss()
                 }
+                .buttonStyle(.glassProminent)
             }
         }
         .onDisappear { saveText() }
@@ -306,15 +313,19 @@ private struct ClipboardEditorView: View {
         catch { debugPrint("Failed to save context: \(error)") }
     }
 
-    // MARK: 复制到系统剪贴板（iOS/macOS）
+    // MARK: 复制到系统剪贴板（走 SwiftUtils）
 
     private func copyToClipboard() {
-        #if os(iOS)
-        UIPasteboard.general.string=clipContent
-        #else
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(clipContent, forType: .string)
-        #endif
+        ClipboardUtil().setString(clipContent)
+    }
+
+    // MARK: 从系统剪贴板粘贴（走 SwiftUtils）
+
+    private func pasteFromClipboard() {
+        let text=ClipboardUtil().getString()
+        if text.isNotEmpty {
+            clipContent += text
+        }
     }
 }
 
