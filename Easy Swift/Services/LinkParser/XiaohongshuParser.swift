@@ -48,8 +48,8 @@ struct XiaohongshuParser: LinkParser {
 
         guard !images.isEmpty || !videos.isEmpty || title?.isNotEmpty == true else {
             #if DEBUG
-            print("[XiaohongshuParser] 解析失败（emptyResult）: \(url.absoluteString)")
-            print("  - 主站 HTML: \(html.count) 字符, 含 __INITIAL_STATE__=\(html.contains("window.__INITIAL_STATE__")), imageList 数量=\(extractNoteImages(from: html).count), og:image=\(OGMetaExtractor.extract(property: "og:image", from: html).count)")
+            debugPrint("[XiaohongshuParser] 解析失败（emptyResult）: \(url.absoluteString)")
+            debugPrint("  - 主站 HTML: \(html.count) 字符, 含 __INITIAL_STATE__=\(html.contains("window.__INITIAL_STATE__")), imageList 数量=\(extractNoteImages(from: html).count), og:image=\(OGMetaExtractor.extract(property: "og:image", from: html).count)")
             #endif
             throw LinkParseError.emptyResult
         }

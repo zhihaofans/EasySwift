@@ -117,9 +117,9 @@ struct DateTextView: View {
         let startOfDay2 = calendar.startOfDay(for: date)
         // 如果 date1 是 date2 的前一天
         let result = calendar.isDate(startOfDay1, inSameDayAs: calendar.date(byAdding: .day, value: 1, to: startOfDay2)!)
-        print(nowDate)
-        print(date)
-        print(result)
+        debugPrint(nowDate)
+        debugPrint(date)
+        debugPrint(result)
         return result
     }
 }

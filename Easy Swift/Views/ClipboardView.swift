@@ -63,8 +63,8 @@ struct ClipboardContentView: View {
                     #else
                     let clipStr=NSPasteboard.general.string(forType: .string) ?? "空"
                     #endif
-                    print("当前剪贴板内容：\(clipStr)")
-                    print("当前 clipList 数据：\(clipList)")
+                    debugPrint("当前剪贴板内容：\(clipStr)")
+                    debugPrint("当前 clipList 数据：\(clipList)")
                     clipContentList=clips.map { $0.text }
                 }
             }
@@ -114,7 +114,7 @@ struct ClipboardContentView: View {
             }
             #endif
         }.onAppear {
-            print("onAppear")
+            debugPrint("onAppear")
             manualFetchTasks()
         }
     }
@@ -126,12 +126,12 @@ struct ClipboardContentView: View {
 
         do {
             let clips=try modelContext.fetch(fetchRequest)
-            print("Fetched Clips: " + clips.length.toString)
+            debugPrint("Fetched Clips: " + clips.length.toString)
             clipContentList=clips.map { $0.text }
-            print("clipContentList: " + clipContentList.length.toString)
+            debugPrint("clipContentList: " + clipContentList.length.toString)
 
         } catch {
-            print("Failed to fetch clips: \(error)")
+            debugPrint("Failed to fetch clips: \(error)")
         }
     }
 
@@ -139,7 +139,7 @@ struct ClipboardContentView: View {
         // 1. 确保新任务的标题不是空的
         guard !text.isEmpty else { return }
         if clipContentList.contains(text) {
-            print("剪贴板已存在该内容")
+            debugPrint("剪贴板已存在该内容")
             return
         }
         // 2. 创建一个新的 Task 对象，使用当前输入的任务标题
@@ -147,7 +147,7 @@ struct ClipboardContentView: View {
 //        noteItem.image = image?.heicData()
         let createTime=DateUtil().getTimestamp()
         let clipItem=ClipItemDataModel(id: UUID(), text: text, create_time: createTime, update_time: createTime)
-//        print(clipItem)
+//        debugPrint(clipItem)
         // 3. 使用 modelContext 将新任务插入到数据模型中
         modelContext.insert(clipItem)
         clipList=[clipItem]
@@ -157,9 +157,9 @@ struct ClipboardContentView: View {
         do {
             try modelContext.save()
         } catch {
-            print("Failed to save context: \(error)")
+            debugPrint("Failed to save context: \(error)")
         }
-//        print(modelContext)
+//        debugPrint(modelContext)
         // 5. 清空输入框，准备输入下一个任务 。这里忽略
 //        newTitle = ""
     }
@@ -169,13 +169,13 @@ struct ClipboardContentView: View {
         if let clipboardContent=UIPasteboard.general.string {
             addNewItem(clipboardContent)
         } else {
-            print("剪贴板内容为空或无法转换为字符串")
+            debugPrint("剪贴板内容为空或无法转换为字符串")
         }
         #else
         if let clipboardContent=NSPasteboard.general.string(forType: .string) {
             addNewItem(clipboardContent)
         } else {
-            print("剪贴板内容为空或无法转换为字符串")
+            debugPrint("剪贴板内容为空或无法转换为字符串")
         }
         #endif
     }
@@ -212,11 +212,11 @@ private struct ClipItemView: View {
             modelContext.delete(item)
             path=[item]
             try modelContext.save()
-            print("success to delete context")
+            debugPrint("success to delete context")
         } catch {
-            print("Failed to delete context: \(error)")
+            debugPrint("Failed to delete context: \(error)")
         }
-        print(modelContext)
+        debugPrint(modelContext)
     }
 }
 
@@ -303,7 +303,7 @@ private struct ClipboardEditorView: View {
         modelContext.insert(item)
         path=[item]
         do { try modelContext.save() }
-        catch { print("Failed to save context: \(error)") }
+        catch { debugPrint("Failed to save context: \(error)") }
     }
 
     // MARK: 复制到系统剪贴板（iOS/macOS）

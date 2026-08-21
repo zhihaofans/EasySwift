@@ -179,7 +179,7 @@ struct GithubTrendingView: View {
         GithubTrendingService().getTrendingList(language: selectedLanguage.rawValue) { result in
             trendingList = result.items
         } fail: { err in
-            print(err)
+            debugPrint(err)
             errorText = err
             isLoadingError = true
         }
@@ -294,7 +294,7 @@ struct GithubStarsView: View {
         GithubUserService().getStarsList { result in
             resultList = result
         } fail: { err in
-            print(err)
+            debugPrint(err)
             errorText = err.message
             isLoadingError = true
         }

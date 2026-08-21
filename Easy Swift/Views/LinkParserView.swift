@@ -250,20 +250,20 @@ struct LinkParserView: View {
                 }
             } catch LinkParseError.emptyResult {
                 // HTML 方案拿不到数据（抖音 SPA 反爬）→ 用 WKWebView 执行 JS 兜底解析
-                print("[LinkParserView] HTML 解析为空，启动 WebView 兜底: \(url.absoluteString)")
+                debugPrint("[LinkParserView] HTML 解析为空，启动 WebView 兜底: \(url.absoluteString)")
                 await MainActor.run {
                     isParsing=false
                     webParseURL=url
                     showingWebParser=true
                 }
             } catch LinkParseError.unsupported {
-                print("[LinkParserView] 暂不支持的链接: \(url.absoluteString)")
+                debugPrint("[LinkParserView] 暂不支持的链接: \(url.absoluteString)")
                 await MainActor.run {
                     isParsing=false
                     showAlert(title: "暂不支持", text: "目前支持小红书、抖音链接，更多网站敬请期待")
                 }
             } catch {
-                print("[LinkParserView] 解析失败: \(url.absoluteString) -> \(error.localizedDescription)")
+                debugPrint("[LinkParserView] 解析失败: \(url.absoluteString) -> \(error.localizedDescription)")
                 await MainActor.run {
                     isParsing=false
                     showAlert(title: "解析失败", text: error.localizedDescription)
@@ -427,8 +427,15 @@ private struct RemoteImageView: View {
     let url: URL
     let referer: String
 
+    /// 图片加载状态
+    private enum LoadState {
+        case loading      // 加载中
+        case notImage     // 返回内容不是图片
+        case failed       // 网络/HTTP 加载失败
+    }
+
     @State private var image: PlatformImage?
-    @State private var failed=false
+    @State private var state: LoadState = .loading
 
     var body: some View {
         Group {
@@ -436,18 +443,8 @@ private struct RemoteImageView: View {
                 Image(platformImage: image)
                     .resizable()
                     .scaledToFit()
-            } else if failed {
-                // 加载失败占位
-                VStack(spacing: 4) {
-                    Image(systemName: "photo.badge.exclamationmark")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                    Text("加载失败")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
             } else {
-                ProgressView()
+                statusPlaceholder
             }
         }
         .task(id: url) {
@@ -455,9 +452,38 @@ private struct RemoteImageView: View {
         }
     }
 
+    // 状态占位：加载中 / 非图片 / 加载失败
+    @ViewBuilder
+    private var statusPlaceholder: some View {
+        VStack(spacing: 4) {
+            switch state {
+            case .loading:
+                ProgressView()
+                    .controlSize(.small)
+                Text("加载中")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            case .notImage:
+                Image(systemName: "doc.questionmark")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                Text("非图片")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            case .failed:
+                Image(systemName: "photo.badge.exclamationmark")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                Text("加载失败")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     private func load() async {
         image=nil
-        failed=false
+        state = .loading
         var request=URLRequest(url: url)
         request.setValue(
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
@@ -468,20 +494,25 @@ private struct RemoteImageView: View {
         }
         do {
             let (data, response)=try await URLSession.shared.data(for: request)
-            guard let http=response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                failed=true
+            guard let http=response as? HTTPURLResponse else {
+                state = .failed
                 return
             }
+            guard (200..<300).contains(http.statusCode) else {
+                state = .failed
+                return
+            }
+            // 2xx 但无法解码为图片 → 判定为"非图片"内容
             #if os(macOS)
             image=NSImage(data: data)
             #else
             image=UIImage(data: data)
             #endif
             if image == nil {
-                failed=true
+                state = .notImage
             }
         } catch {
-            failed=true
+            state = .failed
         }
     }
 }

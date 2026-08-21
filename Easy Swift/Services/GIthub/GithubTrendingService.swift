@@ -30,20 +30,20 @@ class GithubTrendingService {
             if value.isEmpty {
                 fail("getTrendingList.result.isEmpty")
             } else {
-//                print(value)
+//                debugPrint(value)
                 do {
                     let result = try JSONDecoder().decode(GithubTrendingResult.self, from: value.data(using: .utf8)!)
                     debugPrint(result.total_count)
                     callback(result)
                 } catch {
-                    print(error)
-                    print("getTrendingList.catch.error")
+                    debugPrint(error)
+                    debugPrint("getTrendingList.catch.error")
                     fail("getTrendingList:\(error)")
                 }
             }
         } fail: { error in
-            print(error)
-            print("getTrendingList.http.error")
+            debugPrint(error)
+            debugPrint("getTrendingList.http.error")
             fail("网络请求错误:\(error)")
         }
     }

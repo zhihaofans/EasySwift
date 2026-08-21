@@ -379,7 +379,7 @@ final class QRScannerHostController: UIViewController {
         do {
             try scanner.startScanning()
         } catch {
-            print("启动扫码失败：\(error.localizedDescription)")
+            debugPrint("启动扫码失败：\(error.localizedDescription)")
             return
         }
 

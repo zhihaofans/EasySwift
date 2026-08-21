@@ -28,26 +28,26 @@ class GithubUserService {
     func getStarsList(callback: @escaping ([GithubTrendingItem])->Void, fail: @escaping (GithubApiResultErrorModel)->Void) {
         let username = GithubLoginService().getUserName()
         let url = "https://api.github.com/users/\(username)/starred"
-        print(url)
+        debugPrint(url)
         http.get(url) { value in
             if value.isEmpty {
                 fail(GithubApiResultErrorModel(message: "getStarsList.result.isEmpty", documentation_url: ""))
             } else {
-//                print(value)
+//                debugPrint(value)
                 do {
                     let result = try JSONDecoder().decode([GithubTrendingItem].self, from: value.data(using: .utf8)!)
 //                    debugPrint(result.total_count)
                     callback(result)
                 } catch {
-                    print(error)
-                    print("getStarsList.catch.error")
+                    debugPrint(error)
+                    debugPrint("getStarsList.catch.error")
                     if value.contains("documentation_url") {
                         do {
                             let apiErrResult = try JSONDecoder().decode(GithubApiResultErrorModel.self, from: value.data(using: .utf8)!)
                             fail(apiErrResult)
                         } catch let err_ {
-                            print(err_)
-                            print("getStarsList.catch.error")
+                            debugPrint(err_)
+                            debugPrint("getStarsList.catch.error")
                             fail(GithubApiResultErrorModel(message: "getStarsList:\(err_)", documentation_url: ""))
                         }
                     } else {
@@ -56,8 +56,8 @@ class GithubUserService {
                 }
             }
         } fail: { error in
-            print(error)
-            print("getStarsList.http.error")
+            debugPrint(error)
+            debugPrint("getStarsList.http.error")
             fail(GithubApiResultErrorModel(message: "getStarsList.network:\(error)", documentation_url: ""))
         }
     }

@@ -78,22 +78,22 @@ enum HTMLFetcher {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else {
-                print("[LinkParser] 请求无 HTTP 响应: \(url.absoluteString)")
+                debugPrint("[LinkParser] 请求无 HTTP 响应: \(url.absoluteString)")
                 throw LinkParseError.fetchFailed
             }
             guard (200 ..< 300).contains(http.statusCode) else {
                 // 非 2xx：输出状态码与响应开头，便于排查（如反爬 403）
                 let snippet = String(data: data, encoding: .utf8)?.prefix(300) ?? "<非文本响应>"
-                print("[LinkParser] 请求失败 \(url.absoluteString) -> HTTP \(http.statusCode), 响应开头: \(snippet)")
+                debugPrint("[LinkParser] 请求失败 \(url.absoluteString) -> HTTP \(http.statusCode), 响应开头: \(snippet)")
                 throw LinkParseError.fetchFailed
             }
             let finalURL = http.url ?? url
-            print("[LinkParser] 请求成功 \(url.absoluteString) -> \(finalURL.absoluteString) HTTP \(http.statusCode), \(data.count) bytes")
+            debugPrint("[LinkParser] 请求成功 \(url.absoluteString) -> \(finalURL.absoluteString) HTTP \(http.statusCode), \(data.count) bytes")
             return (String(data: data, encoding: .utf8) ?? "", finalURL)
         } catch let error as LinkParseError {
             throw error
         } catch {
-            print("[LinkParser] 请求异常 \(url.absoluteString): \(error.localizedDescription)")
+            debugPrint("[LinkParser] 请求异常 \(url.absoluteString): \(error.localizedDescription)")
             throw LinkParseError.fetchFailed
         }
     }

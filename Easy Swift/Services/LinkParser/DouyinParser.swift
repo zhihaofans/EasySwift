@@ -50,10 +50,10 @@ struct DouyinParser: LinkParser {
             let hasRouter = html.contains("window._ROUTER_DATA")
             let ogImage = OGMetaExtractor.extract(property: "og:image", from: html).count
             let ogVideo = OGMetaExtractor.extract(property: "og:video", from: html).count
-            print("[DouyinParser] 解析失败（emptyResult）: \(url.absoluteString)")
-            print("  - 最终 URL: \(finalURL.absoluteString)")
-            print("  - HTML: \(html.count) 字符, 含 _ROUTER_DATA=\(hasRouter), og:image=\(ogImage), og:video=\(ogVideo)")
-            print("  - 视频 id: \(extractVideoID(from: finalURL) ?? "nil")")
+            debugPrint("[DouyinParser] 解析失败（emptyResult）: \(url.absoluteString)")
+            debugPrint("  - 最终 URL: \(finalURL.absoluteString)")
+            debugPrint("  - HTML: \(html.count) 字符, 含 _ROUTER_DATA=\(hasRouter), og:image=\(ogImage), og:video=\(ogVideo)")
+            debugPrint("  - 视频 id: \(extractVideoID(from: finalURL) ?? "nil")")
             #endif
             throw LinkParseError.emptyResult
         }
