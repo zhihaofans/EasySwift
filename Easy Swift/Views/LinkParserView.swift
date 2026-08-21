@@ -25,6 +25,8 @@ struct LinkParserView: View {
     @State private var alertText="未知错误"
     @State private var previewFileURL: URL?
     @State private var isPreparingPreview=false
+    @State private var previewProgress: Double=0
+    @State private var previewDownloadTask: Task<Void, Never>?
     @State private var showingWebParser=false
     @State private var webParseURL: URL?
     @State private var webParseStatus: WebParserStatus = .loading
@@ -100,10 +102,16 @@ struct LinkParserView: View {
             if isPreparingPreview {
                 ZStack {
                     Color.black.opacity(0.15)
-                    VStack(spacing: 8) {
-                        ProgressView()
-                        Text("正在加载预览...")
+                    VStack(spacing: 12) {
+                        ProgressView(value: previewProgress)
+                            .progressViewStyle(.linear)
+                            .frame(width: 180)
+                        Text("正在加载预览... \(Int(previewProgress * 100))%")
                             .font(.subheadline)
+                        Button("取消加载") {
+                            cancelPreviewDownload()
+                        }
+                        .buttonStyle(.bordered)
                     }
                     .padding(20)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -324,12 +332,20 @@ struct LinkParserView: View {
             openURL(url)
             return
         }
+        // 取消可能仍在进行的下载
+        previewDownloadTask?.cancel()
         Task { @MainActor in
             isPreparingPreview=true
+            previewProgress=0
         }
-        Task {
+        previewDownloadTask=Task {
             do {
-                let fileURL=try await downloadToTempFile(url)
+                let fileURL=try await downloadToTempFile(url) { progress in
+                    Task { @MainActor in
+                        previewProgress=progress
+                    }
+                }
+                try Task.checkCancellation()
                 #if os(macOS)
                 if isVideoURL(fileURL) {
                     let apps=appsThatCanOpen(fileURL)
@@ -359,10 +375,21 @@ struct LinkParserView: View {
             } catch {
                 await MainActor.run {
                     isPreparingPreview=false
-                    showAlert(title: "预览失败", text: "下载失败：\(error.localizedDescription)")
+                    // 用户主动取消：静默关闭，不弹错误
+                    if !Task.isCancelled {
+                        showAlert(title: "预览失败", text: "下载失败：\(error.localizedDescription)")
+                    }
                 }
             }
         }
+    }
+
+    // 手动取消预览下载（网络差/视频太大时）
+    private func cancelPreviewDownload() {
+        previewDownloadTask?.cancel()
+        previewDownloadTask=nil
+        isPreparingPreview=false
+        previewProgress=0
     }
 
     // 是否为常见视频文件扩展名
@@ -386,8 +413,8 @@ struct LinkParserView: View {
     }
     #endif
 
-    // 带防盗链头（UA + Referer）下载到临时目录，返回带扩展名的本地文件
-    private func downloadToTempFile(_ url: URL) async throws -> URL {
+    // 带防盗链头（UA + Referer）流式下载到临时目录，返回带扩展名的本地文件；onProgress 回调下载进度（0~1）
+    private func downloadToTempFile(_ url: URL, onProgress: @escaping @Sendable (Double) -> Void) async throws -> URL {
         var request=URLRequest(url: url)
         request.setValue(
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
@@ -397,10 +424,38 @@ struct LinkParserView: View {
         if referer.isNotEmpty {
             request.setValue(referer, forHTTPHeaderField: "Referer")
         }
-        let (data, response)=try await URLSession.shared.data(for: request)
+        let (bytes, response)=try await URLSession.shared.bytes(for: request)
         guard let http=response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw LinkParseError.fetchFailed
         }
+        let expectedLength=Int(http.expectedContentLength)
+        var data=Data()
+        var buffer=Data()
+        var received=0
+        var lastReported=0
+        for try await byte in bytes {
+            buffer.append(byte)
+            received += 1
+            // 每 64KB 冲刷一次，避免逐字节 append 开销过大
+            if buffer.count >= 64 * 1024 {
+                data.append(buffer)
+                buffer.removeAll(keepingCapacity: true)
+                // 冲刷时检查取消：Task.cancel() 后下一个数据块到达即退出下载
+                try Task.checkCancellation()
+            }
+            // 节流上报：每 256KB 或进度满时
+            if expectedLength > 0 {
+                if received - lastReported >= 256 * 1024 || received == expectedLength {
+                    lastReported=received
+                    onProgress(Double(received) / Double(expectedLength))
+                }
+            }
+        }
+        if !buffer.isEmpty {
+            data.append(buffer)
+        }
+        try Task.checkCancellation()
+        onProgress(1.0)
         let ext=url.pathExtension.isEmpty ? "jpg" : url.pathExtension
         let fileURL=FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
@@ -429,9 +484,9 @@ private struct RemoteImageView: View {
 
     /// 图片加载状态
     private enum LoadState {
-        case loading      // 加载中
-        case notImage     // 返回内容不是图片
-        case failed       // 网络/HTTP 加载失败
+        case loading // 加载中
+        case notImage // 返回内容不是图片
+        case failed // 网络/HTTP 加载失败
     }
 
     @State private var image: PlatformImage?
@@ -453,7 +508,6 @@ private struct RemoteImageView: View {
     }
 
     // 状态占位：加载中 / 非图片 / 加载失败
-    @ViewBuilder
     private var statusPlaceholder: some View {
         VStack(spacing: 4) {
             switch state {
