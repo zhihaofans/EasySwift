@@ -13,76 +13,37 @@ import AppKit
 #endif
 
 struct GithubMainView: View {
-    @State private var selectedTab = 0
     var body: some View {
-        switch selectedTab {
-        case 0:
+        TabView {
             GithubTrendingView()
-        case 1:
-            // TODO: Github star / watch / fork 界面
-            GithubStarsView()
-        case 2:
-            // TODO: 我的Github界面、设置界面、历史记录界面
-            GithubMyView()
-        default:
-            // TODO: Github 主页、动态、热门榜、搜索
-            List {
-                Text("Hello, Github!")
-            }
-            .navigationTitle("Github")
-            .toolbar {
-                // 工具栏分平台放置
-                #if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: SettingView()) {
-                        Image(systemName: "person")
-                    }
-                }
-                #else
-                ToolbarItem(placement: .automatic) {
-                    NavigationLink(destination: SettingView()) {
-                        Image(systemName: "person")
-                    }
-                }
-                #endif
-                // TODO: 改成哔哩哔哩设置界面
-//                #if os(iOS)
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    NavigationLink(destination: SettingView()) {
-//                        Image(systemName: "gear")
-//                    }
-//                }
-//                #else
-//                ToolbarItem(placement: .automatic) {
-//                    NavigationLink(destination: SettingView()) {
-//                        Image(systemName: "gear")
-//                    }
-//                }
-//                #endif
-            }
-        }
-        TabView(selection: $selectedTab) {
-            Text("")
                 .tabItem {
                     Label("探索", systemImage: "flame")
                 }
-                .tag(0)
-
-            Text("")
-                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
+            GithubStarsView()
                 .tabItem {
                     Label("收藏", systemImage: "star.fill")
                 }
-                .tag(1)
-
-            Text("")
-                .fixedSize(horizontal: false, vertical: true) // 纵向固定大小
+            GithubMyView()
                 .tabItem {
                     Label("我的", systemImage: "person.fill")
                 }
-                .tag(2)
         }
-        .frame(maxHeight: 50) // 限制最大高度
+        .navigationTitle("Github")
+        .toolbar {
+            #if os(iOS)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: GithubSettingView()) {
+                    Image(systemName: "gear")
+                }
+            }
+            #else
+            ToolbarItem(placement: .automatic) {
+                NavigationLink(destination: GithubSettingView()) {
+                    Image(systemName: "gear")
+                }
+            }
+            #endif
+        }
     }
 }
 
@@ -110,15 +71,23 @@ struct GithubTrendingView: View {
     @State private var isLoadingError = false
     @State private var errorText = "加载失败，请重试"
     var body: some View {
-        VStack {
-            List {
+        VStack(spacing: 0) {
+            // 筛选：时间 + 语言
+            VStack(spacing: 12) {
                 Picker(selection: $selectedDate) {
                     Text("今日").tag(DateType.day)
                     Text("本周").tag(DateType.week)
                     Text("本月").tag(DateType.month)
                 } label: {
                     Text("时间(暂不支持修改)")
-                }.disabled(true)
+                }
+                .disabled(true)
+                #if os(iOS)
+                .pickerStyle(.segmented)
+                #else
+                .pickerStyle(.menu)
+                #endif
+
                 Picker(selection: $selectedLanguage) {
                     Text("Swift").tag(LanguageType.swift)
                     Text("Java").tag(LanguageType.java)
@@ -127,49 +96,58 @@ struct GithubTrendingView: View {
                     Text("JavaScript").tag(LanguageType.javascript)
                 } label: {
                     Text("语言")
-                }.onChange(of: selectedLanguage) { _, _ in
+                }
+                .onChange(of: selectedLanguage) { _, _ in
                     self.loadingTrendingData()
                 }
-                if isLoadingError {
-                    Text("错误:\(errorText)").font(.largeTitle)
-                } else if trendingList.isEmpty {
-                    ProgressView()
-                } else {
-                    ForEach(trendingList, id: \.id) { item in
-                        //                        Text(item.name).font(.title)
-                        GithubTrendingContentView(item).onClick {
-                            // iOS 走 Safari 预览；macOS 用默认浏览器
-                            #if os(iOS)
-                            safariUrlString = item.html_url
-                            isShowingSafari = true
-                            #else
-                            if let url = URL(string: item.html_url) {
-                                NSWorkspace.shared.open(url)
-                            }
-                            #endif
+                #if os(iOS)
+                .pickerStyle(.navigationLink)
+                #else
+                .pickerStyle(.menu)
+                #endif
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            // 结果列表：官方 trending 卡片式
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    if isLoadingError {
+                        Text("错误:\(errorText)")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    } else if trendingList.isEmpty {
+                        ProgressView()
+                            .padding(.top, 40)
+                    } else {
+                        ForEach(trendingList, id: \.id) { item in
+                            GithubRepoCardView(item: item)
+                                .onClick {
+                                    // iOS 走 Safari 预览；macOS 用默认浏览器
+                                    #if os(iOS)
+                                    safariUrlString = item.html_url
+                                    isShowingSafari = true
+                                    #else
+                                    if let url = URL(string: item.html_url) {
+                                        NSWorkspace.shared.open(url)
+                                    }
+                                    #endif
+                                }
+                                .padding(.horizontal)
                         }
                     }
                 }
+                .padding(.vertical, 8)
             }
-            // 仅在 iOS 上挂载 Safari 预览修饰符，macOS 移除避免链接错误
-            #if os(iOS)
-            .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
-            #endif
-        }.onAppear {
+        }
+        .onAppear {
             self.loadingTrendingData()
         }
         .setNavigationTitle("Github")
-        .toolbar {
-            #if os(iOS)
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Image(systemName: "gear")
-            }
-            #else
-            ToolbarItem(placement: .automatic) {
-                Image(systemName: "gear")
-            }
-            #endif
-        }
+        // 仅在 iOS 上挂载 Safari 预览修饰符，macOS 移除避免链接错误
+        #if os(iOS)
+        .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
+        #endif
     }
 
     private func loadingTrendingData() {
@@ -186,34 +164,66 @@ struct GithubTrendingView: View {
     }
 }
 
-struct GithubTrendingContentView: View {
-    private let contentItem: GithubTrendingItem
-    init(_ contentItem: GithubTrendingItem) {
-        self.contentItem = contentItem
-    }
+// Github 仓库卡片（参考官方 trending 卡片式）
+struct GithubRepoCardView: View {
+    let item: GithubTrendingItem
 
     var body: some View {
-        VStack(alignment: .leading) {
-            VStack {
-                Text(contentItem.full_name)
-                    .foregroundStyle(.blue)
+        VStack(alignment: .leading, spacing: 8) {
+            // 标题：仓库图标 + owner/name
+            HStack(spacing: 6) {
+                Image(systemName: "book.closed")
+                    .foregroundStyle(.secondary)
+                Text(item.full_name)
+                    .font(.headline)
+                    .foregroundStyle(.tint)
                     .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-//                .frame(maxHeight: .infinity) // 设置对齐方式
-//                .onClick {
-//                    let webUrl = appService.checkLink(itemData.modules.module_author.jump_url)
-//                    appService.openUrl(appUrl: webUrl, webUrl: webUrl)
-//                }
-                Spacer()
-                HStack {
-                    Text(contentItem.language ?? "🈚")
-                    Text("🌟\(contentItem.stargazers_count)")
-                        .lineLimit(1)
-                        .padding(.horizontal, 20) // 设置水平方向的内间距
-
-                    Spacer()
-                }
             }
+            // 描述
+            if let desc=item.description, desc.isNotEmpty {
+                Text(desc)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            // 底部信息：语言色点 + 语言名 / star / fork
+            HStack(spacing: 16) {
+                if let lang=item.language, lang.isNotEmpty {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(languageColor(lang))
+                            .frame(width: 10, height: 10)
+                        Text(lang)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Label("\(item.stargazers_count)", systemImage: "star")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Label("\(item.forks_count)", systemImage: "tuningfork")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+    }
+
+    // 语言对应色点颜色（参考 GitHub 官方语言色）
+    private func languageColor(_ lang: String) -> Color {
+        switch lang.lowercased() {
+        case "swift": return .orange
+        case "python": return .blue
+        case "java": return .red
+        case "go": return .cyan
+        case "javascript": return .yellow
+        case "typescript": return .blue
+        case "rust": return .orange
+        case "kotlin": return .purple
+        case "c++", "c#", "c": return .pink
+        default: return .gray
         }
     }
 }
@@ -238,27 +248,33 @@ struct GithubStarsView: View {
     var body: some View {
         VStack {
             if UserName.isNotEmpty {
-                List {
-                    Picker(selection: $selectedType) {
-                        Text("Stars").tag(StarsViewType.star)
-                        Text("Watch").tag(StarsViewType.watch).disabled(true)
-                        Text("Fork").tag(StarsViewType.fork).disabled(true)
-                    } label: {
-                        Text("类型")
-                    }.disabled(true)
-                    if isLoadingError {
-                        Text("错误:\(errorText)").font(.largeTitle)
-                    } else if resultList.isEmpty {
-                        ProgressView()
-                    } else {
-                        ForEach(resultList, id: \.id) { item in
-                            //                        Text(item.name).font(.title)
-                            GithubStarsContentView(item).onClick {
-                                safariUrlString = item.html_url
-                                isShowingSafari = true
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        if isLoadingError {
+                            Text("错误:\(errorText)")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                        } else if resultList.isEmpty {
+                            ProgressView()
+                                .padding(.top, 40)
+                        } else {
+                            ForEach(resultList, id: \.id) { item in
+                                GithubRepoCardView(item: item)
+                                    .onClick {
+                                        #if os(iOS)
+                                        safariUrlString = item.html_url
+                                        isShowingSafari = true
+                                        #else
+                                        if let url = URL(string: item.html_url) {
+                                            NSWorkspace.shared.open(url)
+                                        }
+                                        #endif
+                                    }
+                                    .padding(.horizontal)
                             }
                         }
                     }
+                    .padding(.vertical, 8)
                 }
                 #if os(iOS)
                 .showSafariWebPreviewView(safariUrlString, isPresented: $isShowingSafari)
@@ -274,17 +290,6 @@ struct GithubStarsView: View {
             }
         }
         .setNavigationTitle(UserName.isEmpty ? "Github Stars" : "\(UserName) 's Stars")
-        .toolbar {
-            #if os(iOS)
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Image(systemName: "gear")
-            }
-            #else
-            ToolbarItem(placement: .automatic) {
-                Image(systemName: "gear")
-            }
-            #endif
-        }
     }
 
     private func loadingData() {
@@ -297,38 +302,6 @@ struct GithubStarsView: View {
             debugPrint(err)
             errorText = err.message
             isLoadingError = true
-        }
-    }
-}
-
-struct GithubStarsContentView: View {
-    private let contentItem: GithubTrendingItem
-    init(_ contentItem: GithubTrendingItem) {
-        self.contentItem = contentItem
-    }
-
-    var body: some View {
-        VStack(alignment: .leading) {
-            VStack {
-                Text(contentItem.full_name)
-                    .foregroundStyle(.blue)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-//                .frame(maxHeight: .infinity) // 设置对齐方式
-//                .onClick {
-//                    let webUrl = appService.checkLink(itemData.modules.module_author.jump_url)
-//                    appService.openUrl(appUrl: webUrl, webUrl: webUrl)
-//                }
-                Spacer()
-                HStack {
-                    Text(contentItem.language ?? "🈚")
-                    Text("🌟\(contentItem.stargazers_count)")
-                        .lineLimit(1)
-                        .padding(.horizontal, 20) // 设置水平方向的内间距
-
-                    Spacer()
-                }
-            }
         }
     }
 }

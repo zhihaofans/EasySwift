@@ -11,36 +11,42 @@ import SwiftUtils
 struct GithubMyView: View {
     private let LoginService = GithubLoginService()
     @State private var isLogin: Bool = false
+
     var body: some View {
-        VStack {
+        VStack(spacing: 16) {
             if isLogin {
-                List {
-                    //                    NavigationLink("工具", destination: ToolView())
+                // 已登录状态
+                VStack(spacing: 12) {
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.tint)
                     Text("已登录")
+                        .font(.headline)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(32)
+                .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                .padding(.horizontal)
             } else {
+                // 未登录状态
                 Spacer()
-                Text("未登录").font(.largeTitle)
+                VStack(spacing: 16) {
+                    Image(systemName: "person.crop.circle.badge.exclamationmark")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.secondary)
+                    Text("未登录")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    NavigationLink(destination: GithubSettingView()) {
+                        Label("去设置页配置 Token", systemImage: "gear")
+                    }
+                    .buttonStyle(.glassProminent)
+                    .controlSize(.large)
+                }
                 Spacer()
             }
         }
         .navigationTitle("我的Github")
-        .toolbar {
-            // 工具栏按钮分平台布局
-            #if os(iOS)
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: SettingView()) {
-                    Image(systemName: "gear")
-                }
-            }
-            #elseif os(macOS)
-            ToolbarItem(placement: .automatic) {
-                NavigationLink(destination: SettingView()) {
-                    Image(systemName: "gear")
-                }
-            }
-            #endif
-        }
         .onAppear {
             isLogin = LoginService.isLogin()
         }
