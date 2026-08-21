@@ -48,7 +48,7 @@ struct UITestView: View {
 
                 componentSection("滑块 Slider") {
                     Slider(value: $sliderValue)
-                    Text("当前值：\(Int(sliderValue * 100))%")
+                    Text("当前值：\(Int(sliderValue * 100))")
                         .foregroundStyle(.secondary)
                 }
 

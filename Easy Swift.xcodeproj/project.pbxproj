@@ -92,11 +92,12 @@
 				};
 			};
 			buildConfigurationList = 267CD6382CF36BCC00126C7D /* Build configuration list for PBXProject "Easy Swift" */;
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 267CD6342CF36BCC00126C7D;
 			minimizedProjectReferenceProxies = 1;
@@ -269,7 +270,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Easy-Swift-Info.plist";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "拍个照";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "为了您的安全，应用需要使用Face ID 或 Touch ID来验证身份。";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -314,7 +315,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Easy-Swift-Info.plist";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "拍个照";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "为了您的安全，应用需要使用Face ID 或 Touch ID来验证身份。";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

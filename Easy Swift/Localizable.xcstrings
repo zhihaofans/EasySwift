@@ -1,0 +1,576 @@
+{
+  "sourceLanguage" : "zh-Hans",
+  "strings" : {
+    "" : {
+
+    },
+    "🌟%lld" : {
+
+    },
+    "About" : {
+
+    },
+    "Access Token" : {
+
+    },
+    "Bye" : {
+
+    },
+    "Failed to load app icon" : {
+
+    },
+    "Fork" : {
+
+    },
+    "Github" : {
+
+    },
+    "Github（自动保存）" : {
+
+    },
+    "Go" : {
+
+    },
+    "Hello, Github!" : {
+
+    },
+    "Java" : {
+
+    },
+    "JavaScript" : {
+
+    },
+    "OK" : {
+
+    },
+    "Python" : {
+
+    },
+    "Stars" : {
+
+    },
+    "Swift" : {
+
+    },
+    "Swift UI测试" : {
+
+    },
+    "SwiftUI 组件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SwiftUI Components"
+          }
+        }
+      }
+    },
+    "Watch" : {
+
+    },
+    "二维码" : {
+
+    },
+    "二维码生成失败" : {
+
+    },
+    "今日" : {
+
+    },
+    "关闭" : {
+
+    },
+    "分享" : {
+
+    },
+    "分享二维码" : {
+
+    },
+    "分段选择 Picker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Picker"
+          }
+        }
+      }
+    },
+    "删除" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
+    },
+    "剪贴板" : {
+
+    },
+    "加载中" : {
+
+    },
+    "加载失败" : {
+
+    },
+    "取消" : {
+
+    },
+    "取消加载" : {
+
+    },
+    "启用功能" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Feature"
+          }
+        }
+      }
+    },
+    "图标 Image" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image"
+          }
+        }
+      }
+    },
+    "图片（%lld）" : {
+
+    },
+    "复制" : {
+
+    },
+    "复制文字" : {
+
+    },
+    "字数" : {
+
+    },
+    "完成" : {
+
+    },
+    "完成验证后重新解析" : {
+
+    },
+    "已登录" : {
+
+    },
+    "带副标题" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With subtitle"
+          }
+        }
+      }
+    },
+    "开关 Toggle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toggle"
+          }
+        }
+      }
+    },
+    "弹窗" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alert"
+          }
+        }
+      }
+    },
+    "当前值：%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current: %lld"
+          }
+        }
+      }
+    },
+    "我的" : {
+
+    },
+    "我的Github" : {
+
+    },
+    "手机扫码打开" : {
+
+    },
+    "扫一扫" : {
+
+    },
+    "按钮 Button" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buttons"
+          }
+        }
+      }
+    },
+    "探索" : {
+
+    },
+    "提示" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alert"
+          }
+        }
+      }
+    },
+    "搜点什么" : {
+
+    },
+    "搜索" : {
+
+    },
+    "搜索引擎" : {
+
+    },
+    "收藏" : {
+
+    },
+    "数量：%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Count: %lld"
+          }
+        }
+      }
+    },
+    "新增剪贴板" : {
+
+    },
+    "日期选择 DatePicker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DatePicker"
+          }
+        }
+      }
+    },
+    "时间(暂不支持修改)" : {
+
+    },
+    "未登录" : {
+
+    },
+    "本周" : {
+
+    },
+    "本月" : {
+
+    },
+    "标签 Label" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Label"
+          }
+        }
+      }
+    },
+    "检测到安全验证，请在下方页面中手动完成滑块验证" : {
+
+    },
+    "正在加载预览... %lld%%" : {
+
+    },
+    "正在用浏览器内核加载页面并解析..." : {
+
+    },
+    "正在解析..." : {
+
+    },
+    "正在解析二维码..." : {
+
+    },
+    "步进器 Stepper" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stepper"
+          }
+        }
+      }
+    },
+    "滑块 Slider" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slider"
+          }
+        }
+      }
+    },
+    "玻璃" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glass"
+          }
+        }
+      }
+    },
+    "用户名" : {
+
+    },
+    "用浏览器打开" : {
+
+    },
+    "相册" : {
+
+    },
+    "确定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "视频" : {
+
+    },
+    "视频链接" : {
+
+    },
+    "类型" : {
+
+    },
+    "粘贴" : {
+
+    },
+    "粘贴图片" : {
+
+    },
+    "粘贴链接（支持小红书 / 抖音）" : {
+
+    },
+    "行数" : {
+
+    },
+    "解析链接" : {
+
+    },
+    "设置" : {
+
+    },
+    "访问 Apple 官网" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Visit Apple"
+          }
+        }
+      }
+    },
+    "语言" : {
+
+    },
+    "请先登录" : {
+
+    },
+    "请安装APP" : {
+
+    },
+    "请输入内容" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter text"
+          }
+        }
+      }
+    },
+    "输入" : {
+
+    },
+    "输入二维码文本" : {
+
+    },
+    "输入框 TextField" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TextField"
+          }
+        }
+      }
+    },
+    "输入还是从系统剪贴板导入" : {
+
+    },
+    "这是一个标签" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a label"
+          }
+        }
+      }
+    },
+    "这是一个系统弹窗示例" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a system alert demo"
+          }
+        }
+      }
+    },
+    "进度 ProgressView" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ProgressView"
+          }
+        }
+      }
+    },
+    "选择一个功能" : {
+
+    },
+    "选择打开方式" : {
+
+    },
+    "选择日期" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Date"
+          }
+        }
+      }
+    },
+    "选择颜色" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Color"
+          }
+        }
+      }
+    },
+    "选项" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Option"
+          }
+        }
+      }
+    },
+    "选项一" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Option 1"
+          }
+        }
+      }
+    },
+    "选项三" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Option 3"
+          }
+        }
+      }
+    },
+    "选项二" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Option 2"
+          }
+        }
+      }
+    },
+    "链接 Link" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link"
+          }
+        }
+      }
+    },
+    "链接解析" : {
+
+    },
+    "错误:%@" : {
+
+    },
+    "随便记一下" : {
+
+    },
+    "非图片" : {
+
+    },
+    "颜色选择 ColorPicker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ColorPicker"
+          }
+        }
+      }
+    },
+    "默认" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
