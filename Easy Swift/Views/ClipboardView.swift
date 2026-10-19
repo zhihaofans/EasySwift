@@ -221,8 +221,10 @@ private struct ClipItemView: View {
     @State private var path=[ClipItemDataModel]()
     @Environment(\.modelContext) private var modelContext
     init(path: [ClipItemDataModel], item: ClipItemDataModel) {
-        self.path=path
+        // 先初始化存储属性 item，再通过 backing storage 设置 @State，
+        // 避免 "variable 'self.item' used before being initialized"
         self.item=item
+        _path=State(wrappedValue: path)
     }
 
     var body: some View {

@@ -2,15 +2,6 @@
   "originHash" : "126333d246af66554a405c7a6af8dbd8704b1d6ddbcf99a8643e76ec79a02457",
   "pins" : [
     {
-      "identity" : "alamofire",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Alamofire/Alamofire",
-      "state" : {
-        "revision" : "f455c2975872ccd2d9c81594c658af65716e9b9a",
-        "version" : "5.9.1"
-      }
-    },
-    {
       "identity" : "swift-log",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
@@ -24,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/zhihaofans/SwiftUtils",
       "state" : {
-        "revision" : "b824a951eac852a99e2899ed1f9896b999a20c59",
-        "version" : "0.0.21"
+        "revision" : "66f4e0ad88b4c4b24eb7d6a72354664e121e88ef",
+        "version" : "0.0.26"
       }
     }
   ],
