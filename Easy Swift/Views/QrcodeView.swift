@@ -19,6 +19,9 @@ struct QrcodeView: View {
     @State private var isShowingScanner=false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isDecoding=false
+    // 二维码图由 .task(id:) 生成后存这里，不在 body 里现算
+    @State private var qrImage: PlatformImage?
+    @State private var qrGenerateFailed=false
     var body: some View {
         VStack(spacing: 16) {
             // 输入区：OS 26 玻璃材质，加大尺寸
@@ -61,22 +64,18 @@ struct QrcodeView: View {
                 .padding(.vertical, 4)
             }
             if self.qrcodeContent.isNotEmpty {
-                let qrImage=QrcodeUtil().generateQRCode(from: EncodeUtil().urlDecode(self.qrcodeContent), scale: 5.0)
-                if qrImage == nil {
-                    Text("请安装APP")
-
-                } else {
+                if let qrImage {
                     // 二维码与操作按钮移出 Form：去掉分割线与行背景，整体水平居中
                     HStack {
                         Spacer()
                         #if os(iOS)
-                        Image(uiImage: qrImage!)
+                        Image(uiImage: qrImage)
                             .interpolation(.none) // 保持二维码边缘锐利
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 240, height: 240)
                         #elseif os(macOS)
-                        Image(nsImage: qrImage!)
+                        Image(nsImage: qrImage)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 240, height: 240)
@@ -101,7 +100,7 @@ struct QrcodeView: View {
                         .buttonStyle(.glassProminent)
                         .controlSize(.large)
                         Button(action: {
-                            ShareUtil().shareImage(img: qrImage!)
+                            ShareUtil().shareImage(img: qrImage)
                         }) {
                             Label {
                                 Text("分享二维码")
@@ -116,6 +115,11 @@ struct QrcodeView: View {
                         .controlSize(.large)
                         Spacer()
                     }
+                } else if qrGenerateFailed {
+                    // 原来这里写的是"请安装APP"，其实是生成失败（内容过长/编码问题）
+                    Text("无法生成二维码，内容可能过长")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()
@@ -167,6 +171,28 @@ struct QrcodeView: View {
         .onChange(of: selectedPhoto) { _, newValue in
             decodeQR(from: newValue)
         }
+        .task(id: qrcodeContent) {
+            await refreshQrImage()
+        }
+    }
+
+    /// 生成二维码图。
+    /// 放在 `.task(id:)` 里而不是 body 里：body 每次重算都会重跑 CoreImage，输入框每敲一个字就来一遍。
+    /// 这里按内容变化触发，并防抖 150ms。
+    @MainActor
+    private func refreshQrImage() async {
+        guard qrcodeContent.isNotEmpty else {
+            qrImage=nil
+            qrGenerateFailed=false
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(150))
+        guard !Task.isCancelled else { return }
+        // 保持与原实现一致：先按 URL 解码再生成
+        let image=QrcodeUtil().generateQRCode(from: EncodeUtil().urlDecode(qrcodeContent), scale: 5.0)
+        guard !Task.isCancelled else { return }
+        qrImage=image
+        qrGenerateFailed=(image == nil)
     }
 
     // 说明：

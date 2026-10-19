@@ -27,9 +27,15 @@ struct ClipboardContentView: View {
     @State private var alertText: String="未知错误"
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClipItemDataModel.create_time, order: .reverse) private var clips: [ClipItemDataModel]
-    @State private var clipList=[ClipItemDataModel]()
-    @State private var clipContentList=[String]()
     @State private var editingItem: ClipItemDataModel?
+
+    /// 去重用的文本集合。
+    /// 以前是一份独立的 @State，被 onChange 和手写 fetch 分别写过 —— 同一份数据两个写入点，
+    /// 现在直接由 @Query 的 clips 派生，谁也不用同步谁。
+    private var clipContentList: [String] {
+        clips.map { $0.text }
+    }
+
     var body: some View {
         VStack {
             // 下面是新代码SwiftData
@@ -84,7 +90,7 @@ struct ClipboardContentView: View {
                 #else
                 // iOS：NavigationLink push（toolbar 按钮可见），不用 sheet
                 List(clips) { item in
-                    ClipItemView(path: clipList, item: item)
+                    ClipItemView(item: item)
                         .swipeActions {}
                 }
                 #endif
@@ -93,8 +99,6 @@ struct ClipboardContentView: View {
         .onChange(of: clips) { _, _ in
             // 调试日志：打印系统剪贴板（走 SwiftUtils）
             debugPrint("当前剪贴板内容：\(ClipboardUtil().getString())")
-            debugPrint("当前 clipList 数据：\(clipList)")
-            clipContentList=clips.map { $0.text }
         }
         // 编辑页用 sheet 呈现：点完成保存并返回列表（macOS/iOS 一致）
         .sheet(item: $editingItem) { item in
@@ -144,25 +148,6 @@ struct ClipboardContentView: View {
                 }) { Image(systemName: "gear") }
             }
             #endif
-        }.onAppear {
-            debugPrint("onAppear")
-            manualFetchTasks()
-        }
-    }
-
-    // 手动查询所有任务
-    private func manualFetchTasks() {
-        // 使用 modelContext.fetch() 手动查询 Task 实体
-        let fetchRequest=FetchDescriptor<ClipItemDataModel>(sortBy: [SortDescriptor(\.create_time)])
-
-        do {
-            let clips=try modelContext.fetch(fetchRequest)
-            debugPrint("Fetched Clips: " + clips.length.toString)
-            clipContentList=clips.map { $0.text }
-            debugPrint("clipContentList: " + clipContentList.length.toString)
-
-        } catch {
-            debugPrint("Failed to fetch clips: \(error)")
         }
     }
 
@@ -178,32 +163,20 @@ struct ClipboardContentView: View {
     }
 
     private func addNewItem(_ text: String) {
-        // 1. 确保新任务的标题不是空的
         guard !text.isEmpty else { return }
         if clipContentList.contains(text) {
             debugPrint("剪贴板已存在该内容")
             return
         }
-        // 2. 创建一个新的 Task 对象，使用当前输入的任务标题
-//        let newTask = NoteItemDataModel(text: noteItem.text)
-//        noteItem.image = image?.heicData()
         let createTime=DateUtil().getTimestamp()
         let clipItem=ClipItemDataModel(id: UUID(), text: text, create_time: createTime, update_time: createTime)
-//        debugPrint(clipItem)
-        // 3. 使用 modelContext 将新任务插入到数据模型中
+        // 插入 + 保存；列表由 @Query 自动刷新，不需要再手工维护一份数组
         modelContext.insert(clipItem)
-        clipList=[clipItem]
-//        isNew = false
-        // 4. 保存当前上下文的更改，将新任务持久化到存储中
-//        try? modelContext.save()
         do {
             try modelContext.save()
         } catch {
             debugPrint("Failed to save context: \(error)")
         }
-//        debugPrint(modelContext)
-        // 5. 清空输入框，准备输入下一个任务 。这里忽略
-//        newTitle = ""
     }
 
     private func addFromClip() {
@@ -218,13 +191,10 @@ struct ClipboardContentView: View {
 
 private struct ClipItemView: View {
     private let item: ClipItemDataModel
-    @State private var path=[ClipItemDataModel]()
     @Environment(\.modelContext) private var modelContext
-    init(path: [ClipItemDataModel], item: ClipItemDataModel) {
-        // 先初始化存储属性 item，再通过 backing storage 设置 @State，
-        // 避免 "variable 'self.item' used before being initialized"
+
+    init(item: ClipItemDataModel) {
         self.item=item
-        _path=State(wrappedValue: path)
     }
 
     var body: some View {
@@ -246,13 +216,11 @@ private struct ClipItemView: View {
     private func deleteItem() {
         do {
             modelContext.delete(item)
-            path=[item]
             try modelContext.save()
             debugPrint("success to delete context")
         } catch {
             debugPrint("Failed to delete context: \(error)")
         }
-        debugPrint(modelContext)
     }
 }
 

@@ -118,13 +118,20 @@ struct SearchView: View {
 
     // 当前搜索的网页链接（与 goSearch 一致）
     private func currentSearchURL() -> String {
-        let keyword=SearchKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? SearchKey
+        let keyword=SearchView.encodeKeyword(SearchKey)
         return selectedType.webURL(keyword: keyword)
     }
     #endif
 
+    /// 关键词百分号编码。
+    /// 不能用 `.urlQueryAllowed`：它包含 `& = ? +`，搜索词里带这些字符会凭空多出一个查询参数。
+    /// SwiftUtils 的 `EncodeUtil().urlEncode` 已经把这几个字符排除在外。
+    private static func encodeKeyword(_ raw: String) -> String {
+        return EncodeUtil().urlEncode(raw)
+    }
+
     private func goSearch() {
-        let keyword = SearchKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? SearchKey
+        let keyword=SearchView.encodeKeyword(SearchKey)
         #if os(iOS)
         // 有 App scheme 的类型优先跳转 App，否则用 Safari 预览网页
         if let scheme = selectedType.appSchemeURL {

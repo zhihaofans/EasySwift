@@ -71,8 +71,14 @@ enum DateType: String, CaseIterable, Identifiable {
         case .week: daysAgo=7
         case .month: daysAgo=30
         }
-        let date=Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+        // GitHub 的 created:> 按 UTC 日期比较；用设备时区算会在跨时区时差一天
+        var calendar=Calendar(identifier: .gregorian)
+        calendar.timeZone=TimeZone(secondsFromGMT: 0) ?? .current
+        let date=calendar.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
         let formatter=DateFormatter()
+        formatter.calendar=calendar
+        formatter.locale=Locale(identifier: "en_US_POSIX")
+        formatter.timeZone=calendar.timeZone
         formatter.dateFormat="yyyy-MM-dd"
         return formatter.string(from: date)
     }
