@@ -29,7 +29,13 @@
 - [ ] 横竖屏 + 分屏下：列表、网格、工具栏不裁切，按钮不被遮挡
 - [ ] 每次改动至少跑一次 Duo 模拟器并截图留证
 
-**已知问题**：本机两个 iPhone Duo 模拟器首次启动都报 `Data Migration Failed`，需 `xcrun simctl erase <udid>` 后重建；重建后再把内外屏尺寸补进本节。
+**模拟器状态（2026-10-23 已修复）**：
+
+- `iPhone Duo`（UDID `134E3268-…`）现在可以正常启动，`Data Migration Failed` 是首次迁移失败、重试后自愈；App 已装上并能运行
+- 设备规格：`iOS 27.2 (iPhone19,4)`，主屏 **1398×2034 px**（竖屏，比常规 iPhone 更方）
+- **截图必须带 `--display=1`**：这是多屏设备，`xcrun simctl io <udid> screenshot` 不带参数会报 `Invalid argument`
+
+**适配现状（已发现的问题）**：App 在 Duo 上是**以手机宽度的窗口运行**，内容挤在左侧、右侧大片留白，工具栏也被压在中间 —— 说明还没声明支持这个尺寸。下一步要确认是 Info.plist / Scene 声明的问题，还是需要 `UIRequiresFullScreen` / 可缩放 scene 的配置。
 
 ---
 
