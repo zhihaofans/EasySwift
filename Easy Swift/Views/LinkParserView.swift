@@ -484,6 +484,30 @@ struct LinkParserView: View {
     #endif
 
     // 带防盗链头（UA + Referer）流式下载到临时目录，返回带扩展名的本地文件；onProgress 回调下载进度（0~1）
+    /// 按 Content-Type 优先、文件头魔数次之、URL 扩展名最后，决定落盘扩展名
+    static func mediaFileExtension(contentType: String, data: Data, url: URL) -> String {
+        let type=contentType.lowercased()
+        if type.contains("mp4") { return "mp4" }
+        if type.contains("quicktime") { return "mov" }
+        if type.contains("webm") { return "webm" }
+        if type.contains("webp") { return "webp" }
+        if type.contains("png") { return "png" }
+        if type.contains("gif") { return "gif" }
+        if type.contains("jpeg") || type.contains("jpg") { return "jpg" }
+        if type.contains("heic") { return "heic" }
+
+        let head=[UInt8](data.prefix(12))
+        if head.count >= 8, head[4] == 0x66, head[5] == 0x74, head[6] == 0x79, head[7] == 0x70 { return "mp4" } // ftyp
+        if head.count >= 2, head[0] == 0xFF, head[1] == 0xD8 { return "jpg" }
+        if head.count >= 2, head[0] == 0x89, head[1] == 0x50 { return "png" }
+        if head.count >= 12, head[0] == 0x52, head[1] == 0x49, head[8] == 0x57, head[9] == 0x45 { return "webp" }
+
+        let known: Set<String>=["mp4", "mov", "m4v", "webm", "jpg", "jpeg", "png", "webp", "gif", "heic"]
+        let pathExt=url.pathExtension.lowercased()
+        if known.contains(pathExt) { return pathExt }
+        return "bin"
+    }
+
     private func downloadToTempFile(_ url: URL, onProgress: @escaping @Sendable (Double) -> Void) async throws -> URL {
         var request=URLRequest(url: url)
         request.setValue(
@@ -527,7 +551,11 @@ struct LinkParserView: View {
         }
         try Task.checkCancellation()
         onProgress(1.0)
-        let ext=url.pathExtension.isEmpty ? "jpg" : url.pathExtension
+        // 扩展名不能再靠 URL 路径猜：抖音的视频直链常常没有扩展名，
+        // 以前这里兜底成 jpg，结果把 mp4 存成 .jpg —— 用户点开看到的就是"一个打不开的 jpeg"
+        let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? ""
+        let ext = Self.mediaFileExtension(contentType: contentType, data: data, url: url)
+        debugPrint("[预览] 下载完成 \(data.count) 字节, Content-Type=\(contentType), 判定扩展名=\(ext)")
         let fileURL=FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension(ext)

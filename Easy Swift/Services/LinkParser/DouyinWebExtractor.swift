@@ -58,6 +58,8 @@ final class DouyinWebExtractor {
     /// 全局只允许一个隐藏 WebView 存活：批量粘贴多条链接时不能连开
     private static var isRunning = false
 
+
+
     private var webView: WKWebView?
     private var hostView: PlatformView?
 
@@ -94,6 +96,7 @@ final class DouyinWebExtractor {
         webView.load(URLRequest(url: url))
 
         var readyPayload: [String: Any]?
+        var lastState: [String: Any]?
         var loginStreak = 0
         let deadline = Date().addingTimeInterval(Self.timeout)
         while Date() < deadline {
@@ -102,6 +105,7 @@ final class DouyinWebExtractor {
 
             guard let raw = await evaluate(Self.readyJS),
                   let state = Self.jsonObject(raw) else { continue }
+            lastState = state
 
             if (state["captcha"] as? Bool) == true {
                 throw DouyinExtractError.blocked
@@ -122,7 +126,14 @@ final class DouyinWebExtractor {
         }
 
         guard readyPayload != nil else {
-            debugPrint("[抖音] \(Int(Self.timeout))s 未就绪，finalURL=\(webView.url?.absoluteString ?? "nil")")
+            // 超时把最后一次探测到的页面状态打出来：
+            // hook/render/work 全是 0 → 页面根本没拿到数据（限流或登录墙）；
+            // 有值却没就绪 → 判据写错了。两种情况的修法完全不同
+            let snapshot=lastState.map { state in
+                "hook=\(state["hook"] ?? "-") render=\(state["render"] ?? "-") work=\(state["work"] ?? "-") captcha=\(state["captcha"] ?? "-") login=\(state["login"] ?? "-")"
+            } ?? "无状态（脚本一直没返回）"
+            debugPrint("[抖音] \(Int(Self.timeout))s 未就绪，finalURL=\(webView.url?.absoluteString ?? "nil") 状态: \(snapshot)")
+            DouyinWebViewCooldown.markFailure()
             throw DouyinExtractError.timeout
         }
 
@@ -154,6 +165,15 @@ final class DouyinWebExtractor {
             }
         }
         guard !images.isEmpty || !videos.isEmpty else { return nil }
+        // 动图与图片靠下标配对，错位了用户看到的"第 N 张是动图"就是错的 —— 打下标便于核对
+        if !motions.isEmpty {
+            debugPrint("[抖音] 动图下标(0 起)=\(motions.keys.sorted()) 图片数=\(images.count)")
+            if let info = payload["motionInfo"] as? [[String: Any]] {
+                for item in info {
+                    debugPrint("[抖音] 动图[下标\(item["i"] ?? "-")] 时长\(item["d"] ?? "-") URL=\(item["u"] ?? "-")")
+                }
+            }
+        }
         let title = (payload["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         return LinkParseResult(title: title, images: images, videos: videos, motions: motions)
     }
@@ -174,6 +194,9 @@ final class DouyinWebExtractor {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController = controller
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        // 每次解析用独立的匿名会话：复用同一个 ttwid 容易被平台标记，
+        // 表现就是「页面能打开但没有任何数据」（hook/render/work 全 0）
+        configuration.websiteDataStore = .nonPersistent()
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         // 桌面版页面才给完整的作品数据（移动 UA 会拿到裁剪过的分享页）
@@ -351,20 +374,25 @@ extension DouyinWebExtractor {
         for (var i=0; i<list.length; i++){ if (list[i]) return list[i]; }
         return '';
       }
+      function looksLikeAudio(url){
+        return /ies-music|\/music\/|\.mp3(\?|$)/i.test(String(url));
+      }
       function videoURL(video){
         if (!video) return '';
         var play = video.play_addr || video.playAddr || {};
         var url = pick(play.url_list || play.urlList);
-        if (url) return String(url).replace('playwm', 'play');
+        // 配乐（ies-music 的 mp3）不是动图：有些条目的 video 字段挂的是 BGM
+        if (url) return looksLikeAudio(url) ? '' : String(url).replace('playwm', 'play');
         var rates = video.bit_rate || video.bitRate || [];
         for (var i=0; i<rates.length; i++){
           var addr = rates[i].play_addr || rates[i].playAddr || {};
           var one = pick(addr.url_list || addr.urlList);
-          if (one) return String(one).replace('playwm', 'play');
+          if (one) return looksLikeAudio(one) ? '' : String(one).replace('playwm', 'play');
         }
         var download = video.download_addr || video.downloadAddr || {};
         var dl = pick(download.url_list || download.urlList);
-        return dl ? String(dl).replace('playwm', 'play') : '';
+        if (!dl || looksLikeAudio(dl)) return '';
+        return String(dl).replace('playwm', 'play');
       }
       function fill(detail, r){
         if (!detail) return false;
@@ -376,7 +404,11 @@ extension DouyinWebExtractor {
           var best = pick(list);
           r.images.push(best || '');
           var motionVideo = img.video || img.motion || null;
-          r.motions.push(videoURL(motionVideo));
+          var motionUrl = videoURL(motionVideo);
+          r.motions.push(motionUrl);
+          if (motionUrl) {
+            try { r.motionInfo.push({i: i, d: (motionVideo && (motionVideo.duration || motionVideo.video_duration)) || 0, u: motionUrl.slice(0, 70)}); } catch(e) {}
+          }
         }
         // 图文作品的 detail.video 里挂的是配乐（play_addr 指向 ies-music 的 mp3），
         // 不能当视频返回；只有没有图片时才认为它是视频作品
@@ -386,7 +418,7 @@ extension DouyinWebExtractor {
         }
         return r.images.length > 0 || r.videos.length > 0;
       }
-      var r = {src: 'none', title: '', images: [], motions: [], videos: []};
+      var r = {src: 'none', title: '', images: [], motions: [], videos: [], motionInfo: []};
 
       // 1) SSR：<script id="RENDER_DATA">，内容是 URL 编码的 JSON
       try {
@@ -438,4 +470,30 @@ extension DouyinWebExtractor {
       return JSON.stringify(r);
     })();
     """#
+}
+
+
+/// WebView 失败冷却。
+/// 一次超时说明平台当前不给我们数据，短时间内重试只是再让用户干等 18 秒；
+/// 冷却期内调用方应直接走 HTTP（代价是图文暂时没有动图）。
+enum DouyinWebViewCooldown {
+    private static let lock=NSLock()
+    private static var lastFailure: Date?
+    static let duration: TimeInterval=300
+
+    static var isCoolingDown: Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard let lastFailure else { return false }
+        return Date().timeIntervalSince(lastFailure) < duration
+    }
+
+    static func markFailure() {
+        lock.lock(); defer { lock.unlock() }
+        lastFailure=Date()
+    }
+
+    static func reset() {
+        lock.lock(); defer { lock.unlock() }
+        lastFailure=nil
+    }
 }

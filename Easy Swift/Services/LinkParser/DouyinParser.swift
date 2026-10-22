@@ -61,12 +61,21 @@ struct DouyinParser: LinkParser {
         var httpErrors: [LinkParseError]=[]
         var httpImageResult: LinkParseResult?
 
+        // 刚失败过就别再开 WebView 了：冷却是为了不再让用户干等 18 秒
+        // （图文作品的动图只有 WebView 拿得到，所以冷却期内等于"暂时没有动图"）
+        let skipWebView=DouyinWebViewCooldown.isCoolingDown
+        if skipWebView {
+            debugPrint("[抖音] WebView 冷却中，直接走 HTTP")
+        }
+
         return try await withThrowingTaskGroup(of: RouteResult.self) { group in
             group.addTask {
                 .http(try await parseSharePage(awemeID: awemeID))
             }
-            group.addTask {
-                .web(try await DouyinWebExtractor.extract(awemeID: awemeID))
+            if !skipWebView {
+                group.addTask {
+                    .web(try await DouyinWebExtractor.extract(awemeID: awemeID))
+                }
             }
 
             while true {
@@ -246,11 +255,18 @@ struct DouyinParser: LinkParser {
                                motions: motions)
     }
 
+    /// 配乐地址（ies-music 的 mp3）不是视频/动图，必须排除
+    static func looksLikeAudio(_ raw: String) -> Bool {
+        let lower=raw.lowercased()
+        return lower.contains("ies-music") || lower.contains("/music/") || lower.hasSuffix(".mp3")
+    }
+
     /// 播放地址：优先 play_addr，其次码率列表；带水印地址把 `playwm` 换成 `play`
     static func playURL(_ video: [String: Any]) -> URL? {
         if let address = video["play_addr"] as? [String: Any],
            let list = address["url_list"] as? [String],
            let raw = list.first,
+           !looksLikeAudio(raw),
            let url = URL(string: raw.replacingOccurrences(of: "playwm", with: "play"))
         {
             return url.httpsURL
@@ -260,6 +276,7 @@ struct DouyinParser: LinkParser {
                 guard let address = rate["play_addr"] as? [String: Any],
                       let list = address["url_list"] as? [String],
                       let raw = list.first,
+                      !looksLikeAudio(raw),
                       let url = URL(string: raw.replacingOccurrences(of: "playwm", with: "play"))
                 else { continue }
                 return url.httpsURL
