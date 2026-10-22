@@ -2,8 +2,14 @@
 //  LinkParser.swift
 //  Easy Swift
 //
-//  通用链接解析接口：输入链接 → 解析页面中的图片/视频
-//  新网站支持：实现 LinkParser 协议并注册到 LinkParserRegistry 即可
+//  链接解析的公共契约：结果模型、错误模型、解析器协议与注册表。
+//
+//  约定：
+//  - 抓取一律走 VideoHTTP（它负责 UA、最终 URL、Cookie、短链）；
+//  - 失败必须抛 LinkParseError，由它决定用户看到的那句话；
+//  - 「解析不到」和「被拦住」是两件事，不要都报成"内容不存在"。
+//
+//  新网站支持：实现 LinkParser 协议并注册到 LinkParserRegistry 即可。
 //
 //  Created by zzh on 2026/08/20.
 //
@@ -15,25 +21,63 @@ struct LinkParseResult {
     var title: String?
     var images: [URL]
     var videos: [URL]
+    /// 动图 / Live Photo：键是它在 `images` 里的下标，值是该图的短视频地址。
+    /// 用下标而不是数组下标对齐——动图只出现在部分图上，用数组会整体错位。
+    var motions: [Int: URL]
+    /// 成功但有话说：去水印回退、动图缺失之类，界面上提示一次即可
+    var notice: String?
 
-    init(title: String? = nil, images: [URL] = [], videos: [URL] = []) {
+    init(title: String? = nil,
+         images: [URL] = [],
+         videos: [URL] = [],
+         motions: [Int: URL] = [:],
+         notice: String? = nil)
+    {
         self.title = title
         self.images = images
         self.videos = videos
+        self.motions = motions
+        self.notice = notice
+    }
+
+    var isEmpty: Bool {
+        return images.isEmpty && videos.isEmpty
     }
 }
 
-/// 解析错误
+/// 解析错误：`kind` 决定用户看到的文案，**不要**把 HTTP 状态码直接甩给用户。
 enum LinkParseError: LocalizedError {
-    case unsupported // 不支持的网站
-    case fetchFailed // 页面抓取失败
-    case emptyResult // 未解析到内容
+    /// 不支持的网站 / 链接形态
+    case unsupported
+    /// 需要登录才能看（平台登录墙）
+    case needLogin
+    /// 网络层失败：超时、DNS、连接被拒
+    case network
+    /// 被风控拦截（验证码页、异常跳转）
+    case blocked
+    /// 作品确实没了：删除、私密、不可见
+    case notFound
+    /// 页面拿到了，但没解析出内容
+    case emptyResult
+    /// 平台改版 / 响应结构变了，`message` 写实测事实，便于排查
+    case unknown(String)
 
     var errorDescription: String? {
         switch self {
-        case .unsupported: return "暂不支持该网站"
-        case .fetchFailed: return "获取页面失败，请检查网络或稍后重试"
-        case .emptyResult: return "未解析到图片或视频"
+        case .unsupported:
+            return "暂不支持该网站"
+        case .needLogin:
+            return "该内容需要登录后才能查看"
+        case .network:
+            return "网络请求失败，请检查网络后重试"
+        case .blocked:
+            return "平台风控拦截了本次请求，请稍后重试"
+        case .notFound:
+            return "内容不存在、已删除或不可见"
+        case .emptyResult:
+            return "未解析到图片或视频"
+        case let .unknown(message):
+            return message.isEmpty ? "解析失败，请稍后重试" : message
         }
     }
 }
@@ -63,39 +107,27 @@ enum LinkParserRegistry {
         }
         return try await parser.parse(url: url)
     }
+
+    /// 该链接由哪个解析器负责（nil = 不支持）
+    static func parser(for url: URL) -> (any LinkParser)? {
+        return parsers.first(where: { $0.canParse(url) })
+    }
 }
 
-/// HTML 抓取工具
+// MARK: - 兼容层（抖音回退路线仍在使用，迁移完成后删除）
+
+/// 简单的页面抓取：等价于 `VideoHTTP.get` + 非 2xx 抛错。
+/// 新代码请直接用 `VideoHTTP`，这里只为还没迁完的解析器保留。
 enum HTMLFetcher {
-    /// 模拟浏览器 UA 抓取页面 HTML，返回 HTML 与重定向后的最终 URL（短链会跳到真实页面）
     static func fetchHTML(url: URL) async throws -> (html: String, finalURL: URL) {
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 15
-        request.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            forHTTPHeaderField: "User-Agent"
-        )
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                debugPrint("[LinkParser] 请求无 HTTP 响应: \(url.absoluteString)")
-                throw LinkParseError.fetchFailed
-            }
-            guard (200 ..< 300).contains(http.statusCode) else {
-                // 非 2xx：输出状态码与响应开头，便于排查（如反爬 403）
-                let snippet = String(data: data, encoding: .utf8)?.prefix(300) ?? "<非文本响应>"
-                debugPrint("[LinkParser] 请求失败 \(url.absoluteString) -> HTTP \(http.statusCode), 响应开头: \(snippet)")
-                throw LinkParseError.fetchFailed
-            }
-            let finalURL = http.url ?? url
-            debugPrint("[LinkParser] 请求成功 \(url.absoluteString) -> \(finalURL.absoluteString) HTTP \(http.statusCode), \(data.count) bytes")
-            return (String(data: data, encoding: .utf8) ?? "", finalURL)
-        } catch let error as LinkParseError {
-            throw error
-        } catch {
-            debugPrint("[LinkParser] 请求异常 \(url.absoluteString): \(error.localizedDescription)")
-            throw LinkParseError.fetchFailed
+        let response = try await VideoHTTP.get(url, ua: VideoHTTP.UA.desktopChrome)
+        guard (200 ..< 300).contains(response.status) else {
+            let snippet = response.body.prefix(300)
+            debugPrint("[LinkParser] 请求失败 \(url.absoluteString) -> HTTP \(response.status)，响应开头: \(snippet)")
+            // 非 2xx 多半是 SPA/风控页，交给上层走 WebView 兜底，而不是直接判失败
+            throw LinkParseError.emptyResult
         }
+        return (response.body, response.url)
     }
 
     /// 从 HTML 中收集符合域名特征的图片 URL（去重、去水印参数前的原始地址）
@@ -114,6 +146,8 @@ enum HTMLFetcher {
         }.unique
     }
 }
+
+// MARK: - 工具
 
 /// OG Meta 标签提取（og:title / og:image / og:video 等）
 enum OGMetaExtractor {

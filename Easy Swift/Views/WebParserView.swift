@@ -12,6 +12,14 @@
 import SwiftUI
 import WebKit
 
+/// 兜底 WebView 用哪套脚本
+/// - generic：任意 SPA，靠 og / video / img 计数判就绪
+/// - douyin：注入 XHR 钩子，靠"钩子有数据或出现真作品图"判就绪（与隐藏 WebView 主路线同一套脚本）
+enum WebParserMode {
+    case generic
+    case douyin
+}
+
 /// WebView 解析状态
 enum WebParserStatus {
     case loading       // 页面加载/渲染中
@@ -25,13 +33,14 @@ struct WebParserView: UIViewRepresentable {
     let onFail: (String) -> Void
     let onStatusChange: (WebParserStatus) -> Void
     let retryTrigger: UUID?
+    var mode: WebParserMode = .generic
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
+        let webView = WebParserView.makeWebView(mode: mode)
         webView.navigationDelegate = context.coordinator
         context.coordinator.currentWebView = webView
         webView.load(URLRequest(url: url))
@@ -111,7 +120,7 @@ struct WebParserView: UIViewRepresentable {
                 WebParserView.extract(from: webView, parent: parent)
                 return
             }
-            webView.evaluateJavaScript(WebParserView.statusJS) { [weak self] result, error in
+            webView.evaluateJavaScript(WebParserView.statusJS(for: self.parent.mode)) { [weak self] result, error in
                 guard let self else { return }
                 guard error == nil, let json = result as? String,
                       let data = json.data(using: .utf8),
@@ -119,15 +128,13 @@ struct WebParserView: UIViewRepresentable {
                     return
                 }
                 let captcha = (obj["captcha"] as? Bool) ?? false
-                let og = (obj["og"] as? Int) ?? 0
-                let vids = (obj["vids"] as? Int) ?? 0
-                let imgs = (obj["imgs"] as? Int) ?? 0
+                let hasContent = WebParserView.hasContent(obj, mode: self.parent.mode)
                 DispatchQueue.main.async {
                     if captcha {
                         self.parent.onStatusChange(.captcha)
                     }
                     // 有任一内容即提取（og 标签 / 视频 / 图片）
-                    if og > 0 || vids > 0 || imgs > 0 {
+                    if hasContent {
                         // 提取；若页面仍在渲染（提取为空）则继续轮询等待
                         WebParserView.extract(from: webView, parent: self.parent) { hasContent in
                             if hasContent {
@@ -148,13 +155,14 @@ struct WebParserView: NSViewRepresentable {
     let onFail: (String) -> Void
     let onStatusChange: (WebParserStatus) -> Void
     let retryTrigger: UUID?
+    var mode: WebParserMode = .generic
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
 
     func makeNSView(context: Context) -> WKWebView {
-        let webView = WKWebView()
+        let webView = WebParserView.makeWebView(mode: mode)
         webView.navigationDelegate = context.coordinator
         context.coordinator.currentWebView = webView
         webView.load(URLRequest(url: url))
@@ -229,7 +237,7 @@ struct WebParserView: NSViewRepresentable {
                 WebParserView.extract(from: webView, parent: parent)
                 return
             }
-            webView.evaluateJavaScript(WebParserView.statusJS) { [weak self] result, error in
+            webView.evaluateJavaScript(WebParserView.statusJS(for: self.parent.mode)) { [weak self] result, error in
                 guard let self else { return }
                 guard error == nil, let json = result as? String,
                       let data = json.data(using: .utf8),
@@ -237,14 +245,12 @@ struct WebParserView: NSViewRepresentable {
                     return
                 }
                 let captcha = (obj["captcha"] as? Bool) ?? false
-                let og = (obj["og"] as? Int) ?? 0
-                let vids = (obj["vids"] as? Int) ?? 0
-                let imgs = (obj["imgs"] as? Int) ?? 0
+                let hasContent = WebParserView.hasContent(obj, mode: self.parent.mode)
                 DispatchQueue.main.async {
                     if captcha {
                         self.parent.onStatusChange(.captcha)
                     }
-                    if og > 0 || vids > 0 || imgs > 0 {
+                    if hasContent {
                         // 提取；若页面仍在渲染（提取为空）则继续轮询等待
                         WebParserView.extract(from: webView, parent: self.parent) { hasContent in
                             if hasContent {
@@ -261,6 +267,58 @@ struct WebParserView: NSViewRepresentable {
 #endif
 
 extension WebParserView {
+    /// 建 WebView：抖音模式要挂 document-start 注入并伪装桌面 UA，其余站点保持默认
+    fileprivate static func makeWebView(mode: WebParserMode) -> WKWebView {
+        guard mode == .douyin else { return WKWebView() }
+        let controller = WKUserContentController()
+        controller.addUserScript(WKUserScript(source: DouyinWebExtractor.injectionJS,
+                                              injectionTime: .atDocumentStart,
+                                              forMainFrameOnly: false))
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController = controller
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.customUserAgent = VideoHTTP.UA.desktopChrome
+        return webView
+    }
+
+    /// 就绪判据：两种模式的说法不同，判定逻辑收在这里
+    fileprivate static func hasContent(_ obj: [String: Any], mode: WebParserMode) -> Bool {
+        switch mode {
+        case .generic:
+            let og = (obj["og"] as? Int) ?? 0
+            let vids = (obj["vids"] as? Int) ?? 0
+            let imgs = (obj["imgs"] as? Int) ?? 0
+            return og > 0 || vids > 0 || imgs > 0
+        case .douyin:
+            return (obj["hook"] as? Bool) == true
+                || (obj["work"] as? Int ?? 0) > 0
+                || (obj["render"] as? Bool) == true
+        }
+    }
+
+    /// 状态脚本：抖音模式把隐藏 WebView 的判据包一层，映射成通用字段，轮询逻辑不用改
+    fileprivate static func statusJS(for mode: WebParserMode) -> String {
+        switch mode {
+        case .generic:
+            return statusJS
+        case .douyin:
+            let body = DouyinWebExtractor.readyJS.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmed = body.hasSuffix(";") ? String(body.dropLast()) : body
+            return "(function(){var s=JSON.parse(\(trimmed));return JSON.stringify({captcha:!!s.captcha,og:0,vids:0,imgs:(s.work||0)+(s.hook?1:0)+(s.render?1:0)});})()"
+        }
+    }
+
+    /// 取数脚本：抖音模式复用主路线那套（RENDER_DATA → 钩子 → DOM）
+    fileprivate static func extractionJS(for mode: WebParserMode) -> String {
+        switch mode {
+        case .generic:
+            return extractionJS
+        case .douyin:
+            return DouyinWebExtractor.extractJS
+        }
+    }
+
     /// 状态检查：验证码元素（多种选择器）/ og:image / video / img
     fileprivate static let statusJS = """
     (function(){
@@ -319,7 +377,7 @@ extension WebParserView {
     //  - 轮询路径：提取为空时继续轮询等待（页面可能仍在渲染/验证码刚过）
     //  - 超时/手动路径：提取为空时 onFail 给出明确结果
     fileprivate static func extract(from webView: WKWebView, parent: WebParserView, completion: ((Bool) -> Void)? = nil) {
-        webView.evaluateJavaScript(extractionJS) { result, error in
+        webView.evaluateJavaScript(extractionJS(for: parent.mode)) { result, error in
             DispatchQueue.main.async {
                 guard error == nil,
                       let jsonString = result as? String,

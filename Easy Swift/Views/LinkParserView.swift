@@ -18,6 +18,8 @@ import CoreServices
 
 struct LinkParserView: View {
     @State private var linkInput=""
+    /// 输入框焦点：点解析/回车时主动收起键盘
+    @FocusState private var inputFocused: Bool
     @State private var isParsing=false
     @State private var result: LinkParseResult?
     @State private var showingAlert=false
@@ -30,6 +32,11 @@ struct LinkParserView: View {
     @State private var showingWebParser=false
     @State private var webParseURL: URL?
     @State private var webParseStatus: WebParserStatus = .loading
+    /// 兜底 WebView 用哪套脚本：抖音要注入钩子，通用站点保持原样
+    @State private var webParserMode: WebParserMode = .generic
+    /// 需要登录时的引导
+    @State private var showingLoginPrompt=false
+    @State private var showingXhsLogin=false
     @State private var retryTrigger: UUID?
     #if os(macOS)
     @State private var showingAppPicker=false
@@ -49,11 +56,18 @@ struct LinkParserView: View {
                 .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
                 .glassEffect(.regular, in: .rect(cornerRadius: 16))
                 .padding(.horizontal)
+                .focused($inputFocused)
+                .submitLabel(.search)
+                .onSubmit {
+                    inputFocused=false
+                    parseLink()
+                }
 
             // 解析按钮
             HStack {
                 Spacer()
                 Button(action: {
+                    inputFocused=false
                     parseLink()
                 }) {
                     Label {
@@ -67,6 +81,8 @@ struct LinkParserView: View {
                 }
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
+                // 解析中再点只会撞上"正在解析另一个作品"，直接禁掉
+                .disabled(isParsing)
                 Spacer()
             }
 
@@ -164,7 +180,7 @@ struct LinkParserView: View {
                         showAlert(title: "解析失败", text: message)
                     }, onStatusChange: { status in
                         webParseStatus=status
-                    }, retryTrigger: retryTrigger)
+                    }, retryTrigger: retryTrigger, mode: webParserMode)
                     HStack {
                         if webParseStatus == .captcha {
                             Button("完成验证后重新解析") {
@@ -183,6 +199,21 @@ struct LinkParserView: View {
                 #endif
             }
         }
+        // 需要登录：不硬塞一句错误，直接给"去登录"的出口
+        .confirmationDialog("需要登录", isPresented: $showingLoginPrompt, titleVisibility: .visible) {
+            Button("登录小红书") {
+                showingXhsLogin=true
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("小红书要登录后才能查看这条内容。如果之前登录过，可能是登录已过期，重新登录一次即可。")
+        }
+        .sheet(isPresented: $showingXhsLogin) {
+            XhsLoginView(onFinished: {
+                // 登录成功立刻重试，用户不用再点一次
+                parseLink()
+            })
+        }
     }
 
     // 结果区：标题 + 图片网格 + 视频链接
@@ -193,24 +224,45 @@ struct LinkParserView: View {
                     Text(title)
                         .font(.headline)
                 }
+                if let notice=result.notice, notice.isNotEmpty {
+                    Label(notice, systemImage: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if result.images.isNotEmpty {
-                    Text("图片（\(result.images.count)）")
+                    let motionCount=result.motions.count
+                    Text(motionCount > 0 ? "图片（\(result.images.count)，其中 \(motionCount) 张是动图）" : "图片（\(result.images.count)）")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
-                        ForEach(result.images, id: \.self) { url in
+                        ForEach(Array(result.images.enumerated()), id: \.offset) { index, url in
+                            let motion=result.motions[index]
                             RemoteImageView(url: url, referer: refererForImage(url))
                                 .frame(height: 100)
                                 .frame(maxWidth: .infinity)
                                 .background(Color.gray.opacity(0.12))
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                                 .contentShape(RoundedRectangle(cornerRadius: 8))
-                                // 单点：全屏预览
-                                .onTapGesture {
-                                    previewItem(url)
+                                // 动图角标：告诉用户这张图点开是动的
+                                .overlay(alignment: .topTrailing) {
+                                    if motion != nil {
+                                        Text("动图")
+                                            .font(.caption2)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(.ultraThinMaterial, in: Capsule())
+                                            .padding(4)
+                                    }
                                 }
-                                // 长按：菜单用浏览器打开
+                                // 单点：有动图就播动图，否则看静态图
+                                .onTapGesture {
+                                    previewItem(motion ?? url)
+                                }
                                 .contextMenu {
+                                    if let motion {
+                                        Button("播放动图") { previewItem(motion) }
+                                        Button("查看静态图") { previewItem(url) }
+                                    }
                                     Button("用浏览器打开") { openURL(url) }
                                 }
                         }
@@ -238,6 +290,8 @@ struct LinkParserView: View {
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        // 上下滑动结果时立即收起键盘，不用先点空白处
+        .scrollDismissesKeyboard(.immediately)
     }
 
     // 解析入口
@@ -256,19 +310,10 @@ struct LinkParserView: View {
                     isParsing=false
                     result=parsed
                 }
-            } catch LinkParseError.emptyResult {
-                // HTML 方案拿不到数据（抖音 SPA 反爬）→ 用 WKWebView 执行 JS 兜底解析
-                debugPrint("[LinkParserView] HTML 解析为空，启动 WebView 兜底: \(url.absoluteString)")
+            } catch let error as LinkParseError {
                 await MainActor.run {
                     isParsing=false
-                    webParseURL=url
-                    showingWebParser=true
-                }
-            } catch LinkParseError.unsupported {
-                debugPrint("[LinkParserView] 暂不支持的链接: \(url.absoluteString)")
-                await MainActor.run {
-                    isParsing=false
-                    showAlert(title: "暂不支持", text: "目前支持小红书、抖音链接，更多网站敬请期待")
+                    handleParseError(error, url: url)
                 }
             } catch {
                 debugPrint("[LinkParserView] 解析失败: \(url.absoluteString) -> \(error.localizedDescription)")
@@ -277,6 +322,31 @@ struct LinkParserView: View {
                     showAlert(title: "解析失败", text: error.localizedDescription)
                 }
             }
+        }
+    }
+
+    /// 失败分流：能从界面上解决的（验证码、页面改版）就别只丢一句错误
+    @MainActor
+    private func handleParseError(_ error: LinkParseError, url: URL) {
+        debugPrint("[LinkParserView] 解析失败(\(error)): \(url.absoluteString)")
+        switch error {
+        case .emptyResult, .blocked:
+            // 风控/验证码/SPA 拿不到数据 → 打开可见页面，用户过完验证再解析
+            webParseURL=url
+            webParserMode = DouyinParser().canParse(url) ? .douyin : .generic
+            webParseStatus = .loading
+            showingWebParser=true
+        case .needLogin:
+            // 已经存过 cookie 还撞墙，多半是登录过期；两种情况都给同一条"去登录"的出路
+            showingLoginPrompt=true
+        case .notFound:
+            showAlert(title: "内容不可见", text: error.localizedDescription)
+        case .network:
+            showAlert(title: "网络错误", text: error.localizedDescription)
+        case .unsupported:
+            showAlert(title: "暂不支持", text: "目前支持小红书、抖音链接，更多网站敬请期待")
+        case let .unknown(message):
+            showAlert(title: "解析失败", text: message)
         }
     }
 
@@ -426,7 +496,8 @@ struct LinkParserView: View {
         }
         let (bytes, response)=try await URLSession.shared.bytes(for: request)
         guard let http=response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw LinkParseError.fetchFailed
+            // 预览下载失败是网络/防盗链问题，不是"页面没有内容"
+            throw LinkParseError.network
         }
         let expectedLength=Int(http.expectedContentLength)
         var data=Data()

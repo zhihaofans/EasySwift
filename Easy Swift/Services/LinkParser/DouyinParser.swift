@@ -2,8 +2,13 @@
 //  DouyinParser.swift
 //  Easy Swift
 //
-//  抖音解析：解析 window._ROUTER_DATA 内嵌数据（yt-dlp / you-get 同源方案）。
-//  视频地址在 video.play_addr.url_list，封面在 cover.url_list；og 标签作兜底。
+//  抖音解析。
+//
+//  主路线是"真跑一遍页面"（DouyinWebExtractor：隐藏 WebView + XHR 钩子 + SSR 取数），
+//  因为纯 HTTP 拿到的分享页会被换成风控挑战页，JSON 接口要签名。
+//
+//  HTTP 回退（iesdouyin 分享页里的 _ROUTER_DATA）保留着，但 2026 年起基本拿不到数据，
+//  只在 WebView 超时/无窗口时试一次，失败了要给用户明确交代，不能含糊报"作品已删除"。
 //
 //  Created by zzh on 2026/08/20.
 //
@@ -15,7 +20,7 @@ struct DouyinParser: LinkParser {
         "抖音"
     }
 
-    /// 支持的链接：抖音主站 + App 分享短链接（v.douyin.com 会重定向到视频页）
+    /// 支持的链接：主站作品页、App 分享短链、移动端分享页
     private static let supportedHosts = ["douyin.com", "v.douyin.com", "iesdouyin.com"]
 
     func canParse(_ url: URL) -> Bool {
@@ -25,186 +30,240 @@ struct DouyinParser: LinkParser {
     }
 
     func parse(url: URL) async throws -> LinkParseResult {
-        let (html, finalURL) = try await HTMLFetcher.fetchHTML(url: url)
-        var parsed = parseHTML(html)
+        // 1. 短链展开（分享链认 iOS UA，桌面 UA 拿不到 Location）
+        let page = try await expandIfNeeded(url)
+        debugPrint("[抖音] 展开后: \(page.absoluteString)")
 
-        // 兜底：拿不到数据时，用重定向后的最终 URL（短链会跳到 iesdouyin.com/share/note|video/{id}）
-        // 提取视频 id，按路径类型构造移动端分享页再抓一次
-        if parsed.videos.isEmpty && parsed.images.isEmpty,
-           let videoID = extractVideoID(from: finalURL),
-           let shareURL = Self.sharePageURL(finalURL, videoID: videoID)
-        {
-            do {
-                let (shareHTML, _) = try await HTMLFetcher.fetchHTML(url: shareURL)
-                let fallback = parseHTML(shareHTML)
-                if !fallback.videos.isEmpty || !fallback.images.isEmpty {
-                    parsed = fallback
+        guard let awemeID = Self.awemeID(from: page) else {
+            throw LinkParseError.unknown("没从链接里识别出作品 id，请确认这是作品分享链接")
+        }
+
+        // 2. 两条路线同时跑，谁先出结果用谁：
+        //    分享页 HTTP 一般 1 秒内返回（实测有时能直接拿到数据），隐藏 WebView 要 5–20 秒；
+        //    只在 WebView 卡住时让用户干等 18 秒，而不是 40 秒。
+        return try await Self.race(awemeID: awemeID)
+    }
+
+    /// 哪条路线出的结果
+    private enum RouteResult {
+        case http(LinkParseResult)
+        case web(LinkParseResult)
+    }
+
+    /// HTTP 分享页 vs 隐藏 WebView 竞速。
+    ///
+    /// 但**图文作品不能谁快用谁**：HTTP 分享页里没有动图资源，谁先到就用谁会把
+    /// 「7 张图 + 7 个动图」降级成「7 张图」。所以规则是：
+    /// - 视频作品：HTTP 先到就直接用（1 秒级）
+    /// - 图文作品：先存下 HTTP 结果，等 WebView 给完整结果；WebView 失败才退回 HTTP
+    private static func race(awemeID: String) async throws -> LinkParseResult {
+        var webErrors: [DouyinExtractError]=[]
+        var httpErrors: [LinkParseError]=[]
+        var httpImageResult: LinkParseResult?
+
+        return try await withThrowingTaskGroup(of: RouteResult.self) { group in
+            group.addTask {
+                .http(try await parseSharePage(awemeID: awemeID))
+            }
+            group.addTask {
+                .web(try await DouyinWebExtractor.extract(awemeID: awemeID))
+            }
+
+            while true {
+                do {
+                    guard let route=try await group.next() else { break }
+                    switch route {
+                    case let .web(result):
+                        // WebView 拿到就是最完整的（含动图），直接收工
+                        group.cancelAll()
+                        return result
+                    case let .http(result):
+                        if result.images.isEmpty {
+                            // 视频作品：HTTP 已经给全了
+                            group.cancelAll()
+                            return result
+                        }
+                        // 图文：先留着，等 WebView 的动图
+                        httpImageResult=result
+                        debugPrint("[抖音] HTTP 先拿到 \(result.images.count) 张图（无动图），继续等 WebView 补动图")
+                    }
+                } catch let error as DouyinExtractError {
+                    webErrors.append(error)
+                } catch let error as LinkParseError {
+                    httpErrors.append(error)
+                } catch {
+                    webErrors.append(.failed(error.localizedDescription))
                 }
-            } catch {
-                // 兜底失败时保留主站结果，由 emptyResult 兜底
             }
-        }
 
-        guard !parsed.images.isEmpty || !parsed.videos.isEmpty || parsed.title?.isNotEmpty == true else {
-            #if DEBUG
-            let hasRouter = html.contains("window._ROUTER_DATA")
-            let ogImage = OGMetaExtractor.extract(property: "og:image", from: html).count
-            let ogVideo = OGMetaExtractor.extract(property: "og:video", from: html).count
-            debugPrint("[DouyinParser] 解析失败（emptyResult）: \(url.absoluteString)")
-            debugPrint("  - 最终 URL: \(finalURL.absoluteString)")
-            debugPrint("  - HTML: \(html.count) 字符, 含 _ROUTER_DATA=\(hasRouter), og:image=\(ogImage), og:video=\(ogVideo)")
-            debugPrint("  - 视频 id: \(extractVideoID(from: finalURL) ?? "nil")")
-            #endif
-            throw LinkParseError.emptyResult
+            group.cancelAll()
+            if let httpImageResult {
+                debugPrint("[抖音] WebView 没补上动图，退回 HTTP 结果")
+                return httpImageResult
+            }
+            throw Self.bestError(webErrors: webErrors, httpErrors: httpErrors)
         }
-        return LinkParseResult(title: parsed.title, images: parsed.images, videos: parsed.videos)
     }
 
-    // 按最终 URL 路径类型构造移动端分享页（note 类型与 video 类型路径不同）
-    private static func sharePageURL(_ url: URL, videoID: String) -> URL? {
-        if url.path.contains("/share/note/") {
-            return URL(string: "https://www.iesdouyin.com/share/note/\(videoID)/")
+    /// 失败时给用户的话：能从界面上解决的（登录、验证码）优先说
+    private static func bestError(webErrors: [DouyinExtractError], httpErrors: [LinkParseError]) -> LinkParseError {
+        if webErrors.contains(where: { if case .needLogin=$0 { true } else { false } }) {
+            return .needLogin
         }
-        return URL(string: "https://www.iesdouyin.com/share/video/\(videoID)/")
+        if webErrors.contains(where: { if case .blocked=$0 { true } else { false } }) {
+            return .blocked
+        }
+        if webErrors.contains(where: { if case .noFrontWindow=$0 { true } else { false } }) {
+            return .unknown("抖音解析需要应用在前台，请切回应用后重试")
+        }
+        // HTTP 路线给出的具体原因比"超时"更有助于排查
+        if let specific=httpErrors.first(where: { error in
+            if case .unknown=error { true } else { false }
+        }) {
+            return specific
+        }
+        if webErrors.contains(where: { if case .busy=$0 { true } else { false } }) {
+            return .unknown("正在解析另一个抖音作品，请稍后再试")
+        }
+        return httpErrors.first ?? .unknown("抖音解析失败，请稍后重试")
     }
 
-    // 从 HTML 中解析视频/封面/标题（主站与分享页共用）
-    private func parseHTML(_ html: String) -> (title: String?, images: [URL], videos: [URL]) {
-        let title = OGMetaExtractor.extract(property: "og:title", from: html).first
-        var videos: [URL] = []
-        var images: [URL] = []
+    // MARK: - 链接处理
 
-        if let json = extractRouterDataJSON(from: html) {
-            // 视频地址：play_addr.url_list 第一个（兜底 download_addr）
-            if let videoURL = extractFirstURL(from: json, underKey: "play_addr") {
-                videos = [videoURL.httpsURL]
-            } else if let downloadURL = extractFirstURL(from: json, underKey: "download_addr") {
-                videos = [downloadURL.httpsURL]
-            }
-            // 封面：cover.url_list 第一个
-            if let coverURL = extractFirstURL(from: json, underKey: "cover") {
-                images = [coverURL.httpsURL]
-            }
-        }
-        // 兜底：og 标签
-        if images.isEmpty {
-            images = OGMetaExtractor.extract(property: "og:image", from: html)
-                .compactMap { URL(string: $0) }
-                .map { $0.httpsURL }
-        }
-        if videos.isEmpty {
-            videos = OGMetaExtractor.extract(property: "og:video", from: html)
-                .compactMap { URL(string: $0) }
-                .map { $0.httpsURL }
-        }
-        return (title, images, videos)
+    private func expandIfNeeded(_ url: URL) async throws -> URL {
+        guard let host = url.host, host.contains("v.douyin") else { return url }
+        return try await VideoHTTP.expandShortLink(url, ua: VideoHTTP.UA.iOSSafari)
     }
 
-    // 从 URL 路径提取抖音视频 id（/video/{id} 或 /note/{id}）
-    private func extractVideoID(from url: URL) -> String? {
-        let components = url.path.split(separator: "/")
-        // 1. 路径最后一段是纯数字且够长
-        if let last = components.last, last.count >= 10, last.allSatisfy({ $0.isNumber }) {
-            return String(last)
-        }
-        // 2. video / note / share/video 后的数字段
-        for (i, comp) in components.enumerated() {
-            if ["video", "note"].contains(comp), i + 1 < components.count, components[i + 1].count >= 10, components[i + 1].allSatisfy({ $0.isNumber }) {
-                return String(components[i + 1])
+    /// 作品 id：/video/<id>、/note/<id>、/slides/<id>，或查询参数 modal_id
+    static func awemeID(from url: URL) -> String? {
+        let parts = url.path.split(separator: "/").map(String.init)
+        if let marker = parts.lastIndex(where: { ["video", "note", "slides"].contains($0) }), marker + 1 < parts.count {
+            let candidate = parts[marker + 1]
+            if candidate.count >= 10, candidate.allSatisfy({ $0.isNumber }) {
+                return candidate
             }
+        }
+        if let last = parts.last, last.count >= 10, last.allSatisfy({ $0.isNumber }) {
+            return last
+        }
+        if let modal = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?.first(where: { $0.name == "modal_id" })?.value,
+            modal.count >= 10
+        {
+            return modal
         }
         return nil
     }
 
-    // MARK: - _ROUTER_DATA 解析（yt-dlp 同源）
+    // MARK: - HTTP 回退
 
-    /// 截取 window._ROUTER_DATA= 后的 JSON 字符串
-    /// 兼容两种格式：裸 JSON（主站）与 JSON.parse("...") 包裹（iesdouyin 分享页）
-    private func extractRouterDataJSON(from html: String) -> String? {
-        guard let markerRange = html.range(of: "window._ROUTER_DATA") else { return nil }
-        let after = html[markerRange.upperBound...]
-        guard let eqRange = after.range(of: "=") else { return nil }
-        let jsonStart = eqRange.upperBound
-        guard let scriptEnd = html[jsonStart...].range(of: "</script>") else { return nil }
-        var raw = String(html[jsonStart..<scriptEnd.lowerBound])
-        raw = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if raw.hasPrefix(";") {
-            raw.removeFirst()
+    static func parseSharePage(awemeID: String) async throws -> LinkParseResult {
+        let url = URL(string: "https://www.iesdouyin.com/share/video/\(awemeID)/")!
+        debugPrint("[抖音] HTTP 回退: \(url.absoluteString)")
+        let response = try await VideoHTTP.get(url, ua: VideoHTTP.UA.iOSSafari, headers: ["Referer": "https://www.iesdouyin.com/"])
+        guard (200 ..< 300).contains(response.status) else {
+            throw LinkParseError.unknown("抖音分享页返回 HTTP \(response.status)（可能需要换网络或稍后重试）")
         }
+        guard let state = routerData(from: response.body) else {
+            throw LinkParseError.unknown("抖音分享页里没有作品数据（页面结构可能已变）")
+        }
+        guard let item = videoItem(in: state), let result = makeResult(item) else {
+            throw LinkParseError.unknown("抖音没有返回该作品的数据（作品可能已删除，或需要登录）")
+        }
+        debugPrint("[抖音] 解析成功(HTTP 回退): 标题=\(result.title ?? "nil") 图=\(result.images.count) 动图=\(result.motions.count) 视频=\(result.videos.count)")
+        return result
+    }
+
+    /// 抠 `window._ROUTER_DATA`，兼容裸 JSON 与 `JSON.parse("…")` 包裹
+    static func routerData(from html: String) -> [String: Any]? {
+        guard let marker = html.range(of: "window._ROUTER_DATA") else { return nil }
+        guard let equal = html[marker.upperBound...].firstIndex(of: "=") else { return nil }
+        let start = html.index(after: equal)
+        guard let end = html[start...].range(of: "</script>") else { return nil }
+
+        var raw = String(html[start ..< end.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        if raw.hasSuffix(";") { raw.removeLast() }
         raw = raw.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // JSON.parse("...") 包裹形式：用 JSONSerialization 解码字符串字面量（还原所有转义）
         if raw.hasPrefix("JSON.parse(") {
             var inner = String(raw.dropFirst("JSON.parse(".count))
-            if inner.hasSuffix(")") || inner.hasSuffix(");") {
-                inner = String(inner.dropLast(inner.hasSuffix(");") ? 2 : 1))
+            if inner.hasSuffix(");") {
+                inner = String(inner.dropLast(2))
+            } else if inner.hasSuffix(")") {
+                inner = String(inner.dropLast())
             }
-            inner = inner.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let data = inner.data(using: .utf8),
                   let decoded = (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) as? String
-            else {
-                return nil
-            }
-            return decoded
+            else { return nil }
+            raw = decoded
         }
-
-        if raw.hasSuffix(";") {
-            raw.removeLast()
-        }
-        return raw
+        guard let data = raw.data(using: .utf8) else { return nil }
+        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
     }
 
-    /// 在 JSON 中定位指定对象（如 "play_addr":{...}），括号配对提取其内容
-    private func extractObjectContent(_ json: String, key: String) -> String? {
-        guard let match = json.range(of: "\"\(key)\"\\s*:\\s*\\{", options: .regularExpression) else { return nil }
-        var index = match.upperBound
-        var depth = 1
-        while index < json.endIndex {
-            let ch = json[index]
-            if ch == "{" {
-                depth += 1
-            } else if ch == "}" {
-                depth -= 1
-                if depth == 0 {
-                    return String(json[match.upperBound..<index])
-                }
-            }
-            index = json.index(after: index)
+    /// `loaderData["video_(id)/page"].videoInfoRes.item_list[0]`
+    static func videoItem(in state: [String: Any]) -> [String: Any]? {
+        guard let loader = state["loaderData"] as? [String: Any] else { return nil }
+        for (key, value) in loader where key.contains("page") {
+            guard let page = value as? [String: Any],
+                  let info = page["videoInfoRes"] as? [String: Any],
+                  let list = info["item_list"] as? [[String: Any]],
+                  let first = list.first
+            else { continue }
+            return first
         }
         return nil
     }
 
-    /// 在对象内容中取 "url_list":["...", ...] 的第一个 URL
-    private func extractFirstURL(from json: String, underKey key: String) -> URL? {
-        guard let content = extractObjectContent(json, key: key) else { return nil }
-        guard let match = content.range(of: #""url_list"\s*:\s*\["#, options: .regularExpression) else { return nil }
-        var index = match.upperBound
-        var depth = 1
-        while index < content.endIndex {
-            let ch = content[index]
-            if ch == "[" {
-                depth += 1
-            } else if ch == "]" {
-                depth -= 1
-                if depth == 0 {
-                    return nil
+    static func makeResult(_ item: [String: Any]) -> LinkParseResult? {
+        var images: [URL] = []
+        var motions: [Int: URL] = [:]
+
+        if let list = item["images"] as? [[String: Any]] {
+            for (index, image) in list.enumerated() {
+                let urls = image["url_list"] as? [String] ?? []
+                if let raw = urls.last ?? urls.first, let url = URL(string: raw) {
+                    images.append(url.httpsURL)
                 }
-            } else if ch == "\"", depth == 1 {
-                // 读取字符串
-                var str = ""
-                index = content.index(after: index)
-                while index < content.endIndex, content[index] != "\"" {
-                    str.append(content[index])
-                    index = content.index(after: index)
-                }
-                let cleaned = str
-                    .replacingOccurrences(of: "\\u002F", with: "/")
-                    .replacingOccurrences(of: "\\/", with: "/")
-                if let url = URL(string: cleaned), url.scheme != nil {
-                    return url
+                if let video = image["video"] as? [String: Any], let motion = playURL(video) {
+                    motions[index] = motion
                 }
             }
-            index = content.index(after: index)
+        }
+
+        var videos: [URL] = []
+        // 图文作品的 video 字段是配乐（ies-music 的 mp3），有图片时不能当视频返回
+        if images.isEmpty, let video = item["video"] as? [String: Any], let url = playURL(video) {
+            videos.append(url)
+        }
+        guard !images.isEmpty || !videos.isEmpty else { return nil }
+
+        let desc = item["desc"] as? String
+        return LinkParseResult(title: desc?.isEmpty == false ? desc : nil,
+                               images: images,
+                               videos: videos,
+                               motions: motions)
+    }
+
+    /// 播放地址：优先 play_addr，其次码率列表；带水印地址把 `playwm` 换成 `play`
+    static func playURL(_ video: [String: Any]) -> URL? {
+        if let address = video["play_addr"] as? [String: Any],
+           let list = address["url_list"] as? [String],
+           let raw = list.first,
+           let url = URL(string: raw.replacingOccurrences(of: "playwm", with: "play"))
+        {
+            return url.httpsURL
+        }
+        if let rates = video["bit_rate"] as? [[String: Any]] {
+            for rate in rates {
+                guard let address = rate["play_addr"] as? [String: Any],
+                      let list = address["url_list"] as? [String],
+                      let raw = list.first,
+                      let url = URL(string: raw.replacingOccurrences(of: "playwm", with: "play"))
+                else { continue }
+                return url.httpsURL
+            }
         }
         return nil
     }

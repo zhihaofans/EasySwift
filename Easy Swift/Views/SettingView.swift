@@ -19,6 +19,9 @@ struct SettingView: View {
     @State private var showingAlert = false
     @State private var alertTitle: String = "未知错误"
     @State private var alertText: String = "未知错误"
+    // 小红书登录态
+    @State private var showingXhsLogin = false
+    @State private var xhsLoggedIn = false
     var body: some View {
         VStack {
             List {
@@ -33,6 +36,25 @@ struct SettingView: View {
                 } else {
                     Text("Failed to load app icon")
                 }
+                Section(header: Text("账号")) {
+                    HStack {
+                        Text("小红书")
+                        Spacer()
+                        Text(xhsLoggedIn ? "已登录" : "未登录")
+                            .foregroundStyle(.secondary)
+                    }
+                    Button(xhsLoggedIn ? "退出登录" : "登录小红书") {
+                        if xhsLoggedIn {
+                            Task {
+                                await XiaohongshuSession.shared.clear()
+                                await refreshXhsLoginState()
+                            }
+                        } else {
+                            showingXhsLogin = true
+                        }
+                    }
+                    .foregroundStyle(xhsLoggedIn ? Color.red : Color.accentColor)
+                }
                 Section(header: Text("About")) {
                     TextItem(title: "开发者", detail: "zhihaofans")
                     TextItem(title: "Version", detail: "\(AppUtil().getAppVersion()) (\(AppUtil().getAppBuild()))" /* "0.0.1" */ )
@@ -45,6 +67,20 @@ struct SettingView: View {
         #else
         .navigationTitle("设置")
         #endif
+        .task {
+            await refreshXhsLoginState()
+        }
+        .sheet(isPresented: $showingXhsLogin) {
+            XhsLoginView(onFinished: {
+                Task { await refreshXhsLoginState() }
+            })
+        }
+    }
+
+    /// 登录态以"钥匙串里有没有 cookie"为准；真伪在解析时会由行为探测兜底
+    @MainActor
+    private func refreshXhsLoginState() async {
+        xhsLoggedIn = await XiaohongshuSession.shared.hasStoredCookie
     }
 
     // MARK: - App 图标获取（跨平台）
