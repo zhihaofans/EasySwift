@@ -21,7 +21,8 @@ struct SettingView: View {
     @State private var alertText: String = "未知错误"
     // 小红书登录态
     @State private var showingXhsLogin = false
-    @State private var xhsLoggedIn = false
+    @State private var showingXhsCookieEdit = false
+    @State private var xhsState: XiaohongshuLoginState = .unknown
     var body: some View {
         VStack {
             List {
@@ -40,20 +41,28 @@ struct SettingView: View {
                     HStack {
                         Text("小红书")
                         Spacer()
-                        Text(xhsLoggedIn ? "已登录" : "未登录")
-                            .foregroundStyle(.secondary)
+                        Text(xhsStateText)
+                            .foregroundStyle(xhsState == .expired ? Color.orange : Color.secondary)
                     }
-                    Button(xhsLoggedIn ? "退出登录" : "登录小红书") {
-                        if xhsLoggedIn {
+                    if xhsState == .valid || xhsState == .expired {
+                        Button("退出登录", role: .destructive) {
                             Task {
                                 await XiaohongshuSession.shared.clear()
                                 await refreshXhsLoginState()
                             }
-                        } else {
+                        }
+                    }
+                    if xhsState != .valid {
+                        Button(xhsState == .expired ? "重新登录" : "登录小红书") {
                             showingXhsLogin = true
                         }
                     }
-                    .foregroundStyle(xhsLoggedIn ? Color.red : Color.accentColor)
+                    Button("手动填写 Cookie") {
+                        showingXhsCookieEdit = true
+                    }
+                    Text("网页登录被滑块卡住时，可以从浏览器复制 cookie 粘进来。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Section(header: Text("About")) {
                     TextItem(title: "开发者", detail: "zhihaofans")
@@ -75,12 +84,27 @@ struct SettingView: View {
                 Task { await refreshXhsLoginState() }
             })
         }
+        .sheet(isPresented: $showingXhsCookieEdit) {
+            XhsCookieEditView(onSaved: {
+                Task { await refreshXhsLoginState() }
+            })
+        }
     }
 
     /// 登录态以"钥匙串里有没有 cookie"为准；真伪在解析时会由行为探测兜底
     @MainActor
+    private var xhsStateText: String {
+        switch xhsState {
+        case .valid: return "已登录"
+        case .expired: return "登录已过期"
+        case .unknown: return "未登录"
+        }
+    }
+
+    /// 状态以「探测结果」为准：有 cookie 不代表能用，过期了要能说出来
+    @MainActor
     private func refreshXhsLoginState() async {
-        xhsLoggedIn = await XiaohongshuSession.shared.hasStoredCookie
+        xhsState = await XiaohongshuSession.shared.refreshState()
     }
 
     // MARK: - App 图标获取（跨平台）

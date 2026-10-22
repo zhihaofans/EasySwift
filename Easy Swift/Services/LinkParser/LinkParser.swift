@@ -114,60 +114,7 @@ enum LinkParserRegistry {
     }
 }
 
-// MARK: - 兼容层（抖音回退路线仍在使用，迁移完成后删除）
-
-/// 简单的页面抓取：等价于 `VideoHTTP.get` + 非 2xx 抛错。
-/// 新代码请直接用 `VideoHTTP`，这里只为还没迁完的解析器保留。
-enum HTMLFetcher {
-    static func fetchHTML(url: URL) async throws -> (html: String, finalURL: URL) {
-        let response = try await VideoHTTP.get(url, ua: VideoHTTP.UA.desktopChrome)
-        guard (200 ..< 300).contains(response.status) else {
-            let snippet = response.body.prefix(300)
-            debugPrint("[LinkParser] 请求失败 \(url.absoluteString) -> HTTP \(response.status)，响应开头: \(snippet)")
-            // 非 2xx 多半是 SPA/风控页，交给上层走 WebView 兜底，而不是直接判失败
-            throw LinkParseError.emptyResult
-        }
-        return (response.body, response.url)
-    }
-
-    /// 从 HTML 中收集符合域名特征的图片 URL（去重、去水印参数前的原始地址）
-    static func extractImageURLs(from html: String, hostPattern: String) -> [URL] {
-        let pattern = #"https?://[^"'\s\\]*\#(hostPattern)[^"'\s\\]*"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
-            return []
-        }
-        let ns = html as NSString
-        let matches = regex.matches(in: html, range: NSRange(location: 0, length: ns.length))
-        return matches.compactMap { match -> URL? in
-            let raw = ns.substring(with: match.range)
-            // 去掉常见转义与尾部标点
-            let cleaned = raw.trimmingCharacters(in: .punctuationCharacters.union(.whitespaces))
-            return URL(string: cleaned)
-        }.unique
-    }
-}
-
 // MARK: - 工具
-
-/// OG Meta 标签提取（og:title / og:image / og:video 等）
-enum OGMetaExtractor {
-    static func extract(property: String, from html: String) -> [String] {
-        var results: [String] = []
-        // 变体1：property 在 content 前
-        let p1 = #"<meta[^>]*property=["']\#(property)["'][^>]*content=["']([^"']+)["'][^>]*>"#
-        // 变体2：content 在 property 前
-        let p2 = #"<meta[^>]*content=["']([^"']+)["'][^>]*property=["']\#(property)["'][^>]*>"#
-        for pattern in [p1, p2] {
-            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { continue }
-            let ns = html as NSString
-            let matches = regex.matches(in: html, range: NSRange(location: 0, length: ns.length))
-            for match in matches where match.numberOfRanges > 1 {
-                results.append(ns.substring(with: match.range(at: 1)))
-            }
-        }
-        return results.unique
-    }
-}
 
 extension Array where Element == String {
     /// 去重并保持顺序

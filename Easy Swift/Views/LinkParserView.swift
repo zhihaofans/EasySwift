@@ -37,6 +37,9 @@ struct LinkParserView: View {
     /// 需要登录时的引导
     @State private var showingLoginPrompt=false
     @State private var showingXhsLogin=false
+    @State private var showingXhsCookieEdit=false
+    /// 撞墙时是"没登录"还是"过期了"，决定弹窗文案
+    @State private var loginPromptExpired=false
     @State private var retryTrigger: UUID?
     #if os(macOS)
     @State private var showingAppPicker=false
@@ -200,17 +203,29 @@ struct LinkParserView: View {
             }
         }
         // 需要登录：不硬塞一句错误，直接给"去登录"的出口
-        .confirmationDialog("需要登录", isPresented: $showingLoginPrompt, titleVisibility: .visible) {
-            Button("登录小红书") {
+        .confirmationDialog(loginPromptExpired ? "登录已过期" : "需要登录",
+                            isPresented: $showingLoginPrompt,
+                            titleVisibility: .visible) {
+            Button(loginPromptExpired ? "重新登录" : "登录小红书") {
                 showingXhsLogin=true
+            }
+            Button("手动填写 Cookie") {
+                showingXhsCookieEdit=true
             }
             Button("取消", role: .cancel) {}
         } message: {
-            Text("小红书要登录后才能查看这条内容。如果之前登录过，可能是登录已过期，重新登录一次即可。")
+            Text(loginPromptExpired
+                 ? "小红书登录态已失效，重新登录一次即可；也可以用浏览器里的 cookie 手动填。"
+                 : "小红书要登录后才能查看这条内容；网页登录被滑块卡住时，可以手动填写 cookie。")
         }
         .sheet(isPresented: $showingXhsLogin) {
             XhsLoginView(onFinished: {
                 // 登录成功立刻重试，用户不用再点一次
+                parseLink()
+            })
+        }
+        .sheet(isPresented: $showingXhsCookieEdit) {
+            XhsCookieEditView(onSaved: {
                 parseLink()
             })
         }
@@ -337,8 +352,11 @@ struct LinkParserView: View {
             webParseStatus = .loading
             showingWebParser=true
         case .needLogin:
-            // 已经存过 cookie 还撞墙，多半是登录过期；两种情况都给同一条"去登录"的出路
-            showingLoginPrompt=true
+            // 已经判定"已登录"却撞墙，解析器已把它标成过期；这里按状态给不同文案
+            Task { @MainActor in
+                loginPromptExpired = (await XiaohongshuSession.shared.state() == .expired)
+                showingLoginPrompt=true
+            }
         case .notFound:
             showAlert(title: "内容不可见", text: error.localizedDescription)
         case .network:

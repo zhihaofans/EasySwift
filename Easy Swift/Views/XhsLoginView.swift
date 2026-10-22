@@ -79,6 +79,7 @@ struct XhsLoginView: View {
         let header=XiaohongshuSession.header(from: cookies.filter { XiaohongshuSession.isRelevant($0) }) ?? ""
         if await XiaohongshuSession.shared.validate(cookieHeader: header) {
             await XiaohongshuSession.shared.save(cookies: cookies)
+            await XiaohongshuSession.shared.refreshState()
             status="登录成功"
             onFinished()
             dismiss()

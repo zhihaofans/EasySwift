@@ -46,6 +46,8 @@ struct XiaohongshuParser: LinkParser {
             response = try await fetch(pageURL, ua: VideoHTTP.UA.desktopChrome)
         }
         if Self.isLoginWall(response) {
+            // 原本判定为"已登录"却撞墙 → 升级成"过期"，界面上要区分这两种情况
+            await XiaohongshuSession.shared.noteLoginWall()
             throw LinkParseError.needLogin
         }
         if Self.isGone(response) {

@@ -10,10 +10,12 @@
 
 ## 一、收尾（链接解析重写已完成，剩三件小事）
 
-- [ ] **删掉 `HTMLFetcher` 兼容层**：[LinkParser.swift](<Easy Swift/Services/LinkParser/LinkParser.swift>) 里现在只剩一个「非 2xx 抛 emptyResult」的薄壳，抖音迁移已完成，可以整段删除；`OGMetaExtractor` 同步确认无引用后一并删
+- [x] **删掉 `HTMLFetcher` 兼容层**（2026-10-23）：连同 `OGMetaExtractor` 一起删除，全项目零引用，`LinkParser.swift` 196 → 143 行
 - [x] **抖音图文动图真机复测**（2026-10-23 通过）：日志 `HTTP 先拿到 7 张图（无动图），继续等 WebView 补动图` → `解析成功(hook) 图=7 动图=7 视频=0`
       —— 期间发现的真因：隐藏 WebView 用了持久化存储，同一个匿名 `ttwid` 被平台标记后连续 `hook/render/work 全 0`；改成每次 `.nonPersistent()` 新会话 + 失败冷却 5 分钟后恢复
-- [ ] **小红书登录过期路径**：只验过「未登录」和「登录成功」两头，中间态（cookie 失效但钥匙串里还有）没真实经历；下次 cookie 过期时确认弹窗是「去登录」而不是「内容不存在」
+- [x] **小红书登录过期路径**（2026-10-23）：新增三态 `unknown / valid / expired` + 解析撞墙时自动降级；新增「手动填写 Cookie」入口（保存前强制探测）
+      - 过程中修掉两个判据问题：`/explore` 游客态也返回 200（不能当登录判据，改用 `/notification`）；5xx 不能判过期（平台限流时会误杀登录态）
+- [ ] **在真机上确认三态文案**：设置页在真实登录态下应显示「已登录」；把钥匙串里的 cookie 改坏后解析，应显示「登录已过期」而不是「需要登录」
 
 ---
 
