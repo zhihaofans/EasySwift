@@ -167,8 +167,11 @@ struct QrcodeView: View {
         }
         try? await Task.sleep(for: .milliseconds(150))
         guard !Task.isCancelled else { return }
-        // 保持与原实现一致：先按 URL 解码再生成
-        let image=QrcodeUtil().generateQRCode(from: EncodeUtil().urlDecode(qrcodeContent), scale: 5.0)
+        // 生成内容 = 输入框内容 = 「复制文字」复制的内容，一律按原文编码，不做 urlDecode。
+        // 原来这里先 urlDecode 再生成，导致两个问题：
+        //  1. 二维码扫出来的文本和旁边「复制文字」拿到的文本不一致；
+        //  2. 扫进来的链接（本身带 %XX）再生成会被二次解码，扫回去就变了——来回一趟不是同一个码。
+        let image=QrcodeUtil().generateQRCode(from: qrcodeContent, scale: 5.0)
         guard !Task.isCancelled else { return }
         qrImage=image
         qrGenerateFailed=(image == nil)
