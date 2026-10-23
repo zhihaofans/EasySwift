@@ -25,8 +25,16 @@ struct LinkParserView: View {
     @State private var showingAlert=false
     @State private var alertTitle="未知错误"
     @State private var alertText="未知错误"
-    /// 就地预览：走通用组件 `.mediaPreview(_:)`，不再下载到临时文件交给 QuickLook
+    /// 就地预览：走通用组件 `.mediaPreview(_:)`
     @State private var previewRequest: MediaPreviewRequest?
+    /// 保存到相册
+    @State private var isSaving=false
+    @State private var saveProgress: Double=0
+    @State private var saveSummary: String?
+    @State private var showingSaveSummary=false
+    /// 保存前先确认要存多少
+    @State private var showingSaveConfirm=false
+    @State private var pendingSaveResult: LinkParseResult?
     @State private var showingWebParser=false
     @State private var webParseURL: URL?
     @State private var webParseStatus: WebParserStatus = .loading
@@ -102,6 +110,44 @@ struct LinkParserView: View {
         }
         .setNavigationTitle("链接解析")
         .mediaPreview($previewRequest)
+        .toolbar {
+            #if os(iOS)
+            ToolbarItem(placement: .navigationBarTrailing) { saveToAlbumButton }
+            #else
+            ToolbarItem(placement: .automatic) { saveToAlbumButton }
+            #endif
+        }
+        .overlay {
+            if isSaving {
+                ZStack {
+                    Color.black.opacity(0.15)
+                    VStack(spacing: 10) {
+                        ProgressView(value: saveProgress)
+                            .frame(width: 180)
+                        Text("正在保存到相册… \(Int(saveProgress * 100))%")
+                            .font(.subheadline)
+                    }
+                    .padding(20)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+                .ignoresSafeArea()
+            }
+        }
+        .confirmationDialog("保存到相册", isPresented: $showingSaveConfirm, titleVisibility: .visible) {
+            Button("保存") {
+                if let pending=pendingSaveResult {
+                    saveAll(pending)
+                }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text(saveConfirmMessage)
+        }
+        .alert("保存结果", isPresented: $showingSaveSummary) {
+            Button("好") {}
+        } message: {
+            Text(saveSummary ?? "")
+        }
         // 单点全屏预览：iOS 用系统 QuickLook 预览本地文件
         // 抖音等 SPA 页面：HTML 解析失败时用 WebView 执行 JS 兜底
         .sheet(isPresented: $showingWebParser) {
@@ -224,6 +270,7 @@ struct LinkParserView: View {
                                         Button("播放动图") { openPreview(result: result, tapped: .video(motion)) }
                                         Button("查看静态图") { openPreview(result: result, tapped: .image(url)) }
                                     }
+                                    Button("保存到相册") { saveOne(result: result, image: url, motion: motion) }
                                     Button("用浏览器打开") { openURL(url) }
                                 }
                         }
@@ -241,8 +288,9 @@ struct LinkParserView: View {
                             Label("视频链接", systemImage: "play.rectangle")
                                 .foregroundStyle(.tint)
                         }
-                        // 长按：菜单用浏览器打开
+                        // 长按：保存 / 用浏览器打开
                         .contextMenu {
+                            Button("保存到相册") { saveOne(result: result, video: url) }
                             Button("用浏览器打开") { openURL(url) }
                         }
                     }
@@ -357,6 +405,135 @@ struct LinkParserView: View {
         return ""
     }
 
+    private func showAlert(title: String, text: String) {
+        alertTitle=title
+        alertText=text
+        showingAlert=true
+    }
+
+    /// 保存前确认：说清楚要存多少张图、多少个视频、其中多少是动图
+    private var saveConfirmMessage: String {
+        guard let result=pendingSaveResult else { return "" }
+        var parts: [String]=[]
+        if !result.images.isEmpty {
+            var images="\(result.images.count) 张图片"
+            if !result.motions.isEmpty { images += "（其中 \(result.motions.count) 张动图会存成实况照片）" }
+            parts.append(images)
+        }
+        if !result.videos.isEmpty { parts.append("\(result.videos.count) 个视频") }
+        return "将保存 " + parts.joined(separator: "、") + "。"
+    }
+
+    // MARK: - 保存到相册
+
+    @ViewBuilder
+    private var saveToAlbumButton: some View {
+        if let result, !result.images.isEmpty || !result.videos.isEmpty {
+            Button {
+                pendingSaveResult=result
+                showingSaveConfirm=true
+            } label: {
+                Label("保存到相册", systemImage: "square.and.arrow.down")
+            }
+            .disabled(isSaving)
+        }
+    }
+
+    /// 保存全部：图片（带动图的存成实况照片）+ 视频
+    private func saveAll(_ result: LinkParseResult) {
+        guard !isSaving else { return }
+        Task { @MainActor in
+            isSaving=true
+            saveProgress=0
+            defer { isSaving=false }
+
+            let total=max(result.images.count + result.videos.count, 1)
+            var done=0
+            var ok=0
+            var failed=0
+            var liveSaved=0
+
+            for (index, image) in result.images.enumerated() {
+                do {
+                    try await PhotoLibrarySaver.save(image: image, motion: result.motions[index])
+                    ok += 1
+                    if result.motions[index] != nil, PhotoLibrarySaver.verifyLatestIsLivePhoto() == true {
+                        liveSaved += 1
+                    }
+                } catch let error as MediaSaveError {
+                    if case .permissionDenied = error {
+                        saveSummary=error.localizedDescription
+                        showingSaveSummary=true
+                        return
+                    }
+                    failed += 1
+                    debugPrint("[相册] 第 \(index + 1) 张保存失败: \(error.localizedDescription)")
+                } catch {
+                    failed += 1
+                    debugPrint("[相册] 第 \(index + 1) 张保存失败: \(error.localizedDescription)")
+                }
+                done += 1
+                saveProgress=Double(done) / Double(total)
+            }
+
+            for video in result.videos {
+                do {
+                    try await PhotoLibrarySaver.save(video: video)
+                    ok += 1
+                } catch {
+                    failed += 1
+                    debugPrint("[相册] 视频保存失败: \(error.localizedDescription)")
+                }
+                done += 1
+                saveProgress=Double(done) / Double(total)
+            }
+
+            var summary="已保存 \(ok) 项"
+            if liveSaved > 0 { summary += "（其中 \(liveSaved) 张为实况照片）" }
+            if failed > 0 { summary += "，\(failed) 项失败" }
+            saveSummary=summary
+            showingSaveSummary=true
+        }
+    }
+
+    private func saveOne(result: LinkParseResult, image: URL, motion: URL?) {
+        guard !isSaving else { return }
+        Task { @MainActor in
+            isSaving=true
+            defer { isSaving=false }
+            do {
+                try await PhotoLibrarySaver.save(image: image, motion: motion)
+                if motion != nil {
+                    switch PhotoLibrarySaver.verifyLatestIsLivePhoto() {
+                    case true: saveSummary="已保存为实况照片"
+                    case false: saveSummary="已保存，但相册未把它识别为实况照片"
+                    case nil: saveSummary="已保存（没有相册读权限，无法确认是否为实况照片）"
+                    }
+                } else {
+                    saveSummary="已保存到相册"
+                }
+            } catch {
+                saveSummary=error.localizedDescription
+            }
+            showingSaveSummary=true
+        }
+    }
+
+    private func saveOne(result: LinkParseResult, video: URL) {
+        guard !isSaving else { return }
+        Task { @MainActor in
+            isSaving=true
+            defer { isSaving=false }
+            do {
+                try await PhotoLibrarySaver.save(video: video)
+                saveSummary="已保存到相册"
+            } catch {
+                saveSummary=error.localizedDescription
+            }
+            showingSaveSummary=true
+        }
+    }
+
     // MARK: - 就地预览
 
     /// 把解析结果摊平成一串可翻页的条目。
@@ -399,92 +576,6 @@ struct LinkParserView: View {
     }
     #endif
 
-    // 带防盗链头（UA + Referer）流式下载到临时目录，返回带扩展名的本地文件；onProgress 回调下载进度（0~1）
-    /// 按 Content-Type 优先、文件头魔数次之、URL 扩展名最后，决定落盘扩展名
-    static func mediaFileExtension(contentType: String, data: Data, url: URL) -> String {
-        let type=contentType.lowercased()
-        if type.contains("mp4") { return "mp4" }
-        if type.contains("quicktime") { return "mov" }
-        if type.contains("webm") { return "webm" }
-        if type.contains("webp") { return "webp" }
-        if type.contains("png") { return "png" }
-        if type.contains("gif") { return "gif" }
-        if type.contains("jpeg") || type.contains("jpg") { return "jpg" }
-        if type.contains("heic") { return "heic" }
-
-        let head=[UInt8](data.prefix(12))
-        if head.count >= 8, head[4] == 0x66, head[5] == 0x74, head[6] == 0x79, head[7] == 0x70 { return "mp4" } // ftyp
-        if head.count >= 2, head[0] == 0xFF, head[1] == 0xD8 { return "jpg" }
-        if head.count >= 2, head[0] == 0x89, head[1] == 0x50 { return "png" }
-        if head.count >= 12, head[0] == 0x52, head[1] == 0x49, head[8] == 0x57, head[9] == 0x45 { return "webp" }
-
-        let known: Set<String>=["mp4", "mov", "m4v", "webm", "jpg", "jpeg", "png", "webp", "gif", "heic"]
-        let pathExt=url.pathExtension.lowercased()
-        if known.contains(pathExt) { return pathExt }
-        return "bin"
-    }
-
-    private func downloadToTempFile(_ url: URL, onProgress: @escaping @Sendable (Double) -> Void) async throws -> URL {
-        var request=URLRequest(url: url)
-        request.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            forHTTPHeaderField: "User-Agent"
-        )
-        let referer=refererForImage(url)
-        if referer.isNotEmpty {
-            request.setValue(referer, forHTTPHeaderField: "Referer")
-        }
-        let (bytes, response)=try await URLSession.shared.bytes(for: request)
-        guard let http=response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            // 预览下载失败是网络/防盗链问题，不是"页面没有内容"
-            throw LinkParseError.network
-        }
-        let expectedLength=Int(http.expectedContentLength)
-        var data=Data()
-        var buffer=Data()
-        var received=0
-        var lastReported=0
-        for try await byte in bytes {
-            buffer.append(byte)
-            received += 1
-            // 每 64KB 冲刷一次，避免逐字节 append 开销过大
-            if buffer.count >= 64 * 1024 {
-                data.append(buffer)
-                buffer.removeAll(keepingCapacity: true)
-                // 冲刷时检查取消：Task.cancel() 后下一个数据块到达即退出下载
-                try Task.checkCancellation()
-            }
-            // 节流上报：每 256KB 或进度满时
-            if expectedLength > 0 {
-                if received - lastReported >= 256 * 1024 || received == expectedLength {
-                    lastReported=received
-                    onProgress(Double(received) / Double(expectedLength))
-                }
-            }
-        }
-        if !buffer.isEmpty {
-            data.append(buffer)
-        }
-        try Task.checkCancellation()
-        onProgress(1.0)
-        // 扩展名不能再靠 URL 路径猜：抖音的视频直链常常没有扩展名，
-        // 以前这里兜底成 jpg，结果把 mp4 存成 .jpg —— 用户点开看到的就是"一个打不开的 jpeg"
-        let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? ""
-        let ext = Self.mediaFileExtension(contentType: contentType, data: data, url: url)
-        debugPrint("[预览] 下载完成 \(data.count) 字节, Content-Type=\(contentType), 判定扩展名=\(ext)")
-        let fileURL=FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension(ext)
-        try data.write(to: fileURL)
-        return fileURL
-    }
-
-    @MainActor
-    private func showAlert(title: String, text: String) {
-        alertTitle=title
-        alertText=text
-        showingAlert=true
-    }
 }
 
 #Preview {

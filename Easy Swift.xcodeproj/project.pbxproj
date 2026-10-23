@@ -273,6 +273,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "拍个照";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "为了您的安全，应用需要使用Face ID 或 Touch ID来验证身份。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "把解析到的图片、动图、视频保存到相册";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "保存后回读相册，用于确认动图存成了实况照片";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -318,6 +320,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "拍个照";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "为了您的安全，应用需要使用Face ID 或 Touch ID来验证身份。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "把解析到的图片、动图、视频保存到相册";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "保存后回读相册，用于确认动图存成了实况照片";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
