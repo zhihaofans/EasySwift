@@ -17,7 +17,7 @@
 - 单 target 的 SwiftUI 多平台工具集：**iOS 26 / macOS 26**，Swift 5 语言模式，各功能页互不依赖。
 - 入口 [Easy_SwiftApp.swift](<Easy Swift/Easy_SwiftApp.swift>) → [ContentView.swift](<Easy Swift/ContentView.swift>) → [MainView.swift](<Easy Swift/Views/MainView.swift>)；新功能页在 `MainView.mainList()` 里注册 `NavigationLink` 才会出现在首页。
 - 分层：[Views/](<Easy Swift/Views>)（页面）、[Views/Componets/](<Easy Swift/Views/Componets>)（共用小件）、[Services/](<Easy Swift/Services>)（网络与解析）、[Models/](<Easy Swift/Models>)（SwiftData + Codable）、[Utils/](<Easy Swift/Utils>)（平台差异、日志、分享）。
-- 依赖：**SwiftUtils（exactVersion 0.0.26）+ swift-log**。SwiftUtils 0.0.26 起已剥离 Alamofire，工程不再依赖它；`HttpUtil` 是纯 Foundation 实现，`setHeader` 收 `[String: String]`，回调固定在主队列。
+- 依赖：**SwiftUtils（exactVersion 0.0.27）+ swift-log**。0.0.26 起已剥离 Alamofire，工程不再依赖它；`HttpUtil` 是纯 Foundation 实现，`setHeader` 收 `[String: String]`，回调固定在主队列。0.0.27 起 `KeychainUtil` 改用数据保护钥匙串（见 §3.2）。
 - 版本唯一真相源是 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`；代码只经 `AppUtil().getAppVersion()` / `getAppBuild()` 读 `Bundle`，不写常量。
 - 文案走 String Catalog（[Localizable.xcstrings](<Easy Swift/Localizable.xcstrings>)，源语言 `zh-Hans`）：直接写中文即可，构建时自动收集，不要手写英文再翻译。
 - **没有测试 target**（见 §5 的替代验证手段）。
@@ -66,6 +66,8 @@ xcrun simctl io "<设备名>" screenshot /tmp/easy-swift.png
 - Token / 密码走 `KeychainUtil`，**不进** `UserDefaults`、`@AppStorage`、日志。
 - 写入失败必须显式暴露（返回 `Bool` 并在 UI 提示），否则表现是"显示已登录，下次启动读不回来"。
 - 做数据迁移时：**读失败不能拿空值覆盖已有真值**（[GithubSettingView.swift](<Easy Swift/Views/GIthub/GithubSettingView.swift>) 用 `loadedToken` 兜底的原因）。
+- SwiftUtils **0.0.27 起 `KeychainUtil` 走数据保护钥匙串**（不再是 macOS 老文件钥匙串，因此不再弹 ACL 授权框）。它依赖 [Easy_Swift.entitlements](<Easy Swift/Easy_Swift.entitlements>) 里的 `keychain-access-groups`：删掉它，`SecItemAdd` 会返回 `errSecMissingEntitlement(-34018)` 并静默回退旧钥匙串，弹窗会重新出现。
+- 自测钥匙串时别把「读出来是 nil」当结论：nil 既可能是没存过，也可能是 ACL 拒绝——旧版就是这样把「授权失败」显示成「未登录」。
 
 ### 3.3 日期
 

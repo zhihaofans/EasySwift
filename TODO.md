@@ -4,7 +4,7 @@
 >
 > 用法：做完就把 `[ ]` 改 `[x]`；新增条目要写清「改哪里 + 怎么算做完」。**不要**在这里记录本机绝对路径、账号、Token。
 
-最后更新：2026-10-22
+最后更新：2026-10-23
 
 ---
 
@@ -15,7 +15,12 @@
       —— 期间发现的真因：隐藏 WebView 用了持久化存储，同一个匿名 `ttwid` 被平台标记后连续 `hook/render/work 全 0`；改成每次 `.nonPersistent()` 新会话 + 失败冷却 5 分钟后恢复
 - [x] **小红书登录过期路径**（2026-10-23）：新增三态 `unknown / valid / expired` + 解析撞墙时自动降级；新增「手动填写 Cookie」入口（保存前强制探测）
       - 过程中修掉两个判据问题：`/explore` 游客态也返回 200（不能当登录判据，改用 `/notification`）；5xx 不能判过期（平台限流时会误杀登录态）
-- [ ] **在真机上确认三态文案**：设置页在真实登录态下应显示「已登录」；把钥匙串里的 cookie 改坏后解析，应显示「登录已过期」而不是「需要登录」
+- [x] **在真机上确认三态文案**：设置页在真实登录态下应显示「已登录」；把钥匙串里的 cookie 改坏后解析，应显示「登录已过期」而不是「需要登录」
+      - 2026-10-24 真机（iPhone 15 Pro / iOS 27.2）：**未登录态已确认**——`keychain.get: 未找到记录, id: xhs_web_session_cookies`，设置页显示「未登录」，没有 -34018、没有回退旧钥匙串（说明 0.0.27 的数据保护钥匙串在真机上生效）
+      - 「已登录」态已确认（2026-10-24）：网页登录后 `登录态探测: status=200 final=…/notification 登录墙=false` → 钥匙串写入成功 → 设置页「已登录」
+      - 「已过期」态已确认（2026-10-24）：用「只在本进程返回假 cookie」的临时开关（不写钥匙串，重启即恢复）→ 探测得到 `status=200 final=https://www.xiaohongshu.com/login?redirectPath=… 登录墙=true` → 状态置 expired → 设置页「登录已过期」
+        - 这个样本顺带证明了**不能按状态码判**：HTTP 200，但最终地址是 `/login`
+      - **仍未验**：解析撞到登录墙 → `noteLoginWall()` 把 valid 降级成 expired 这条路径。公开笔记不登录也能解析，手上没有需要登录的笔记链接，只能等真实遇到私密/风控笔记时再看
 
 ---
 
@@ -43,8 +48,9 @@
 
 ## 三、待办（体检遗留）
 
-- [ ] **iPad 方向配置笔误**：`project.pbxproj` 的 `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad` 末尾多了 `Easy Swift`，Release 构建因此报 *"All interface orientations must be supported..."*；删掉即消除
-- [ ] **二维码内容与「复制文字」不一致**：[QrcodeView.swift](<Easy Swift/Views/QrcodeView.swift>) 生成前做了 `EncodeUtil().urlDecode`，复制却是原文；二选一统一
+- [x] **iPad 方向配置笔误**（2026-10-23 修）：`project.pbxproj` 的 `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad` 末尾多了 `Easy Swift`（两处配置都有），已删；合法值只剩四个 `UIInterfaceOrientation*`
+- [x] **二维码内容与「复制文字」不一致**（2026-10-23 修）：[QrcodeView.swift](<Easy Swift/Views/QrcodeView.swift>) 取消生成前的 `EncodeUtil().urlDecode`，统一为**原文**——输入框、二维码、复制三处同一个字符串
+      —— 原来那样还有一个更隐蔽的后果：扫进来的链接本身带 `%XX`，再生成会被二次解码，扫回去已经不是同一个码
 - [ ] **隐私清单** `PrivacyInfo.xcprivacy`：用了 UserDefaults（CA92.1）等 Required Reason API，上架前必须补（当前不打算上架，优先级最低）
 - [ ] **测试 target**：目前只能靠仓库外 `swiftc` harness 验；若要长期维护，考虑加 unit test target，先覆盖链接解析纯函数、日期换算、参数编码
 - [ ] **删除文件需要动 pbxproj**：[ContentView.swift](<Easy Swift/ContentView.swift>) 只是 `MainView()` 的跳板，合并掉可少一层；但删文件要改工程文件，单独做
@@ -66,15 +72,26 @@
       - 清理：单条删除 + 清空 + 上限裁剪（例如最近 200 条）
       - 验收：写入 → 杀进程 → 重开后仍在；列表顺序按时间倒序；重复解析同一链接不产生两条
 
-- [ ] **动图导出为 Live Photo 存相册**（新需求）
-      - 目标：解析结果里的动图（`motions[i]` + `images[i]`）能一键存成相册里的实况照片，而不是一张静态图 + 一段孤立视频
-      - 技术路径：`PHLivePhoto.request(withResourceFileURLs:placeholderImage:targetSize:contentMode:)` 先合成 → `PHPhotoLibrary.performChanges` 里用 `PHAssetCreationRequest` 分别 `addResource(with: .photo)` 与 `addResource(with: .pairedVideo)`
-      - 前置：工程目前**没有** `INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription`，需要先补（否则保存直接失败且无明显提示）
-      - 坑：静态图与视频的时长/尺寸要成对匹配，否则相册侧可能只认成普通照片；视频要落成 `.mov`（mp4 也能试，但要验证）
-      - 验收：保存后**回读相册**（`PHAsset` 的 `mediaSubtypes` 含 `.photoLive`）确认是实况照片，不能只看 `performChanges` 没抛错
-      - 交互：结果页逐张「存为实况照片」，以及「全部保存」；权限被拒要给可操作提示（区分"未决定"和"已拒绝去设置里开"）
+- [x] **动图导出为 Live Photo 存相册**（2026-10-23 实现并提交 `2127ca6`）
+      - 实现：[PhotoLibrarySaver.swift](<Easy Swift/Services/PhotoLibrarySaver.swift>) —— 静态图写 `MakerApple[17]`、视频走 `AVAssetExportSession` 导 `.mov` 写 `com.apple.quicktime.content.identifier`，两侧同一个 UUID → `PHAssetCreationRequest` 的 `.photo` + `.pairedVideo`
+      - 权限：`NSPhotoLibraryAddUsageDescription`（保存）+ `NSPhotoLibraryUsageDescription`（回读校验）已进工程，两者缺一个都会在保存/校验时被 TCC 直接 trap（`SIGABRT`）
+      - 回读：`verifyLatestIsLivePhoto()` 比对 `mediaSubtypes.contains(.photoLive)`；**没有读权限时返回 `nil`**（我们只申请 `.addOnly`），此时不再说"无法确认"，而是靠 `LivePhotoPair` 的配对回读给结论："已保存为实况照片（配对标识已校验；去相册长按确认）"
+      - 交互：逐张「保存到相册」+ 「全部保存」确认弹窗（预告"N 张图片（其中 M 张动图会存成实况照片）"）；权限类错误整批停下并给设置路径，`.restricted` 单独文案（去设置也改不了，不能骗用户）
+      - **真机验证（2026-10-24，iPhone 15 Pro / iOS 27.2）**：`v.douyin.com/JK1uPOwMU5w` 解析出 7 图 7 动图，保存后 **7/7 全部为实况照片**，每张都有独立的 `实况照片配对标识一致: <UUID>`（7 个不同 UUID），整批耗时 6 秒（00:02:12→00:02:18）
+      - 配对这一步另用仓库外 harness 单独证过：`MediaDownloader` + `LivePhotoPair.make` 产出的 JPEG `MakerApple[17]` 与 MOV `quicktime.content.identifier` 完全一致
+      - **人眼确认（2026-10-24 通过）**：相册里长按保存下来的图**会动** —— 实况照片这条链路从解析、配对、写入到相册归类，全链路真机验证完毕
+      - 过程中补的防线：`LivePhotoPair.make` 写完**回读两侧标识再比对**，不一致就抛错（否则会静默存成"一张照片 + 一段孤儿视频"）；界面文案从"无法确认"改成"配对标识已校验"
 
-- [ ] **链接解析页的状态提示可再细**：现在只有「正在解析…」，抖音图文要等 WebView 5–18 秒，可以加一句「正在用浏览器内核加载」区分阶段
+- [x] **链接解析页的状态提示可再细**（2026-10-23 完成）
+      - 做法：解析层新增 `LinkParseStage` + `LinkParseProgress`（[LinkParser.swift](<Easy Swift/Services/LinkParser/LinkParser.swift>)），解析器在**真实发生**的节点上报；界面显示阶段文案 + 「已等 N 秒」
+      - 阶段：展开短链 → 请求页面 / 请求页面+启用浏览器内核 → （HTTP 线死了）浏览器已打开，等待页面数据 → （HTTP 拿到图、浏览器还活着）已拿到 N 张图，正在补动图 → 校验原图
+      - 关键约定：**文案只能描述还活着的那条线**。两条路线竞速，各自存活状态单独记，死掉的那条不能再出现在提示里（否则会出现"浏览器已关闭，却在说补动图"）
+      - 实测（iPhone 18 Pro 模拟器 + 真链接 `v.douyin.com/JK1uPOwMU5w`，截图留证）：
+        - 「浏览器已打开，等待页面数据…」→ 之后 6.17s 完成，7 图 7 动图
+        - 「已拿到 7 张图，正在补动图… 2 秒」→ 隔 1.46s 再拍变「3 秒」「4 秒」，秒数按真实时间走
+        - CLI/GUI 双 harness：跨线程上报 → 主线程状态 3/3 全部落地；GUI harness 走通了隐藏 WebView 全程（输出与 App 内一致）
+      - 踩坑：**`TimelineView(.periodic(from:by:))` 的秒数会永远落后**。schedule 从 `from`（解析开始时刻）起发条目，而视图是几秒后才建的，实测显示「3 秒」时实际已等 7 秒 —— 换成 `.task(id: parseStartedAt)` 里每秒 `Date().timeIntervalSince(start)` 重算
+      - **未验证**：小红书只用了一条无 `xsec_token` 的笔记 URL（CLI 里读钥匙串取 cookie 会卡住，未跑完），小红书的两条阶段文案仍待在真机上确认
 
 ## 四、需要决策（先别动）
 
@@ -118,9 +135,22 @@
 
 **核对结果**：18 图作品解析出 **9 个动图**（下标 0 起 `[1,3,5,7,13,14,15,16,17]`），逐个下载均为 `Content-Type: video/mp4`、时长 1.6–2.8 秒；用户手工清单为 8 个，缺的是第 4 张——实为真动图。
 
+### macOS 钥匙串弹窗（2026-10-23，SwiftUtils 0.0.27）
+
+- [x] **现象**：macOS 端频繁弹「Easy Swift 想要使用您储存在钥匙串中的机密信息」，点不允许后 GitHub / 小红书登录态"莫名丢失"
+- [x] **定位证据**：统一日志 `subsystem == com.apple.securityd` 里，两次 `SecItemCopyMatching` 之后各跟一条 `CSSM Exception: -2147415839 CSSMERR_CSP_USER_CANCELED`（22:45:39、22:45:53）—— 是**读**的时候弹框、用户取消，不是启动就弹
+- [x] **根因**：`KeychainUtil` 走 macOS 老文件钥匙串，每条记录绑 ACL，ACL 记的是「哪个签名的 App 能读」；重签后读取就要授权，`SecItemCopyMatching` 返回 USER_CANCELED，上层只看到 `nil`
+- [x] **修复（库侧 0.0.27）**：四个查询统一 `kSecUseDataProtectionKeychain` + 同一个 `kSecAttrService`；老记录用 `LAContext.interactionNotAllowed` 静默试读，能读到就迁移、读不到当没存过，**不再弹窗**；宿主缺 entitlement（-34018）时回退旧钥匙串并打 error 日志
+- [x] **工程侧**：[Easy_Swift.entitlements](<Easy Swift/Easy_Swift.entitlements>) 增加 `keychain-access-groups = $(AppIdentifierPrefix)me.zzhhoo.easyswift`（Xcode 的 Keychain Sharing 能力），否则 `SecItemAdd` 返回 `errSecMissingEntitlement(-34018)` 又退回老钥匙串
+- [x] **验证**：签名后的 macOS 产物 entitlements 含 `com.apple.application-identifier` 与 `keychain-access-groups`；App 内跑一次往返（临时探针，已回退）→ 日志 `keychain.save: 写入数据保护钥匙串成功` / 读回值一致 / 删除成功，同期 securityd **零** `CSSMERR_CSP_USER_CANCELED`；iOS 设备签名构建 + macOS 签名构建均通过
+- 副作用：升级后老记录若 ACL 不允许静默读取，不会被迁移 —— 表现为第一次需要重新登录一次 GitHub / 小红书
+
 ### 其他
 
 - [x] SwiftUtils `0.0.22 → 0.0.26`，`HttpUtil` 迁到纯 Foundation，工程不再依赖 Alamofire
+- [x] SwiftUtils `0.0.26 → 0.0.27`（钥匙串改数据保护钥匙串，见上）
+- [x] `debugPrint` 每行 `fflush(stdout)`（2026-10-24）：真机 stdout 是管道、按块缓冲，日志会攒到 4KB 才吐 —— 真机排查相册保存时最后 3 条成功日志一直不出现，差点被当成"保存卡死"
+- [x] 真机调试三条命令（`devicectl`）：`process launch --console` 抓日志、`capture screenshot` 截屏、`pasteboard copy/paste` 塞/取剪贴板；注意 `--console` 会绑定进程生命周期，结束 devicectl 会把 App 一起结束
 - [x] `ClipboardView` 的 `@State` 初始化顺序编译错误
 - [x] GitHub Token 从 UserDefaults 迁到钥匙串（含旧明文迁移、写失败提示）
 - [x] 二维码生成移出 `body`（`.task(id:)` + 150ms 防抖），去掉 3 处强解包
