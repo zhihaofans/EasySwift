@@ -21,6 +21,12 @@ struct LinkParserView: View {
     /// 输入框焦点：点解析/回车时主动收起键盘
     @FocusState private var inputFocused: Bool
     @State private var isParsing=false
+    /// 解析进行中"具体在等什么"：由解析器上报，nil 表示还没轮到具体阶段
+    @State private var parseStage: LinkParseStage?
+    /// 本轮解析的开始时间，用来显示"已经等了多久"
+    @State private var parseStartedAt: Date?
+    /// 本轮已经等了多少秒（自己走，不需要解析线程推）
+    @State private var parseElapsed=0
     @State private var result: LinkParseResult?
     @State private var showingAlert=false
     @State private var alertTitle="未知错误"
@@ -85,13 +91,7 @@ struct LinkParserView: View {
             }
 
             if isParsing {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("正在解析...")
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
+                parseStatusView
             }
 
             if let result {
@@ -303,6 +303,42 @@ struct LinkParserView: View {
         .scrollDismissesKeyboard(.immediately)
     }
 
+    /// 解析中的实时状态。
+    ///
+    /// 抖音图文要等 5–18 秒：只写「正在解析…」用户会以为卡死，
+    /// 所以这里既显示解析器上报的**具体阶段**，也显示本轮**已经等了多久**——
+    /// 秒数在走，就说明它还活着。
+    private var parseStatusView: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text(parseStage?.title ?? "正在解析…")
+                .foregroundStyle(.secondary)
+                .contentTransition(.opacity)
+                .animation(.default, value: parseStage)
+            if parseElapsed >= 2 {
+                Text("\(parseElapsed) 秒")
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.vertical, 4)
+        // 秒数自己走。
+        // 不用 TimelineView：它的 schedule 从 `from` 开始发条目，视图是解析开始后几秒才出现的，
+        // 于是显示的秒数会永远落后真实时间（实测显示 3 秒时实际已等 7 秒）。
+        // 也不用 Timer：.task(id:) 在视图移除时自动取消，不会留下跑着的定时器。
+        .task(id: parseStartedAt) {
+            parseElapsed=0
+            guard let start=parseStartedAt else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { break }
+                parseElapsed=Int(Date().timeIntervalSince(start))
+            }
+        }
+    }
+
     // 解析入口
     private func parseLink() {
         guard let url=extractURL(from: linkInput) else {
@@ -311,23 +347,37 @@ struct LinkParserView: View {
         }
         Task { @MainActor in
             isParsing=true
+            parseStage=nil
+            parseStartedAt=Date()
+        }
+        // 解析器在关键节点调它；回调在解析线程上，自己抛回主线程再改 State
+        let progress=LinkParseProgress { stage in
+            Task { @MainActor in
+                parseStage=stage
+            }
         }
         Task {
             do {
-                let parsed=try await LinkParserRegistry.parse(url: url)
+                let parsed=try await LinkParserRegistry.parse(url: url, progress: progress)
                 await MainActor.run {
                     isParsing=false
+                    parseStage=nil
+                    parseStartedAt=nil
                     result=parsed
                 }
             } catch let error as LinkParseError {
                 await MainActor.run {
                     isParsing=false
+                    parseStage=nil
+                    parseStartedAt=nil
                     handleParseError(error, url: url)
                 }
             } catch {
                 debugPrint("[LinkParserView] 解析失败: \(url.absoluteString) -> \(error.localizedDescription)")
                 await MainActor.run {
                     isParsing=false
+                    parseStage=nil
+                    parseStartedAt=nil
                     showAlert(title: "解析失败", text: error.localizedDescription)
                 }
             }
@@ -453,15 +503,21 @@ struct LinkParserView: View {
             var failed=0
             var liveSaved=0
 
+            var livePairs=0
             for (index, image) in result.images.enumerated() {
                 do {
                     try await PhotoLibrarySaver.save(image: image, motion: result.motions[index])
                     ok += 1
-                    if result.motions[index] != nil, PhotoLibrarySaver.verifyLatestIsLivePhoto() == true {
-                        liveSaved += 1
+                    if result.motions[index] != nil {
+                        // 走的是实况照片分支：配对标识已经在 LivePhotoPair 里回读校验过了
+                        livePairs += 1
+                        if PhotoLibrarySaver.verifyLatestIsLivePhoto() == true {
+                            liveSaved += 1
+                        }
                     }
                 } catch let error as MediaSaveError {
-                    if case .permissionDenied = error {
+                    // 权限问题就整批停下：后面每张都会以同样的方式失败，没必要让用户等 N 次
+                    if error.isPermissionProblem {
                         saveSummary=error.localizedDescription
                         showingSaveSummary=true
                         return
@@ -480,6 +536,10 @@ struct LinkParserView: View {
                 do {
                     try await PhotoLibrarySaver.save(video: video)
                     ok += 1
+                } catch let error as MediaSaveError where error.isPermissionProblem {
+                    saveSummary=error.localizedDescription
+                    showingSaveSummary=true
+                    return
                 } catch {
                     failed += 1
                     debugPrint("[相册] 视频保存失败: \(error.localizedDescription)")
@@ -489,7 +549,13 @@ struct LinkParserView: View {
             }
 
             var summary="已保存 \(ok) 项"
-            if liveSaved > 0 { summary += "（其中 \(liveSaved) 张为实况照片）" }
+            if liveSaved > 0 {
+                summary += "（其中 \(liveSaved) 张为实况照片）"
+            } else if livePairs > 0 {
+                // 没有相册读权限时回读不了 .photoLive，但配对标识这一步已经校验过，
+                // 不能说"无法确认"，也不能直接宣称相册侧认了
+                summary += "（其中 \(livePairs) 张动图已按实况照片写入，配对标识已校验）"
+            }
             if failed > 0 { summary += "，\(failed) 项失败" }
             saveSummary=summary
             showingSaveSummary=true
@@ -507,7 +573,7 @@ struct LinkParserView: View {
                     switch PhotoLibrarySaver.verifyLatestIsLivePhoto() {
                     case true: saveSummary="已保存为实况照片"
                     case false: saveSummary="已保存，但相册未把它识别为实况照片"
-                    case nil: saveSummary="已保存（没有相册读权限，无法确认是否为实况照片）"
+                    case nil: saveSummary="已保存为实况照片（配对标识已校验；去相册长按确认）"
                     }
                 } else {
                     saveSummary="已保存到相册"

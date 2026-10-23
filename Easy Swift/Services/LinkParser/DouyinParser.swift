@@ -29,9 +29,9 @@ struct DouyinParser: LinkParser {
         return Self.supportedHosts.contains(bare)
     }
 
-    func parse(url: URL) async throws -> LinkParseResult {
+    func parse(url: URL, progress: LinkParseProgress) async throws -> LinkParseResult {
         // 1. 短链展开（分享链认 iOS UA，桌面 UA 拿不到 Location）
-        let page = try await expandIfNeeded(url)
+        let page = try await expandIfNeeded(url, progress: progress)
         debugPrint("[抖音] 展开后: \(page.absoluteString)")
 
         guard let awemeID = Self.awemeID(from: page) else {
@@ -41,7 +41,7 @@ struct DouyinParser: LinkParser {
         // 2. 两条路线同时跑，谁先出结果用谁：
         //    分享页 HTTP 一般 1 秒内返回（实测有时能直接拿到数据），隐藏 WebView 要 5–20 秒；
         //    只在 WebView 卡住时让用户干等 18 秒，而不是 40 秒。
-        return try await Self.race(awemeID: awemeID)
+        return try await Self.race(awemeID: awemeID, progress: progress)
     }
 
     /// 哪条路线出的结果
@@ -56,7 +56,7 @@ struct DouyinParser: LinkParser {
     /// 「7 张图 + 7 个动图」降级成「7 张图」。所以规则是：
     /// - 视频作品：HTTP 先到就直接用（1 秒级）
     /// - 图文作品：先存下 HTTP 结果，等 WebView 给完整结果；WebView 失败才退回 HTTP
-    private static func race(awemeID: String) async throws -> LinkParseResult {
+    private static func race(awemeID: String, progress: LinkParseProgress) async throws -> LinkParseResult {
         var webErrors: [DouyinExtractError]=[]
         var httpErrors: [LinkParseError]=[]
         var httpImageResult: LinkParseResult?
@@ -67,6 +67,8 @@ struct DouyinParser: LinkParser {
         if skipWebView {
             debugPrint("[抖音] WebView 冷却中，直接走 HTTP")
         }
+        // 状态提示要说真话：冷却期内根本没开浏览器，就别显示"正在启用浏览器内核"
+        progress(skipWebView ? .requestingPage : .racingPageAndWebView)
 
         return try await withThrowingTaskGroup(of: RouteResult.self) { group in
             group.addTask {
@@ -78,6 +80,11 @@ struct DouyinParser: LinkParser {
                 }
             }
 
+            // 两条线各自的存活状态：状态提示只能描述"还在跑的那条线在干什么"，
+            // 否则会出现「浏览器已关闭，却在说补动图」这种与事实相反的文案
+            var httpAlive = true
+            var webAlive = !skipWebView
+
             while true {
                 do {
                     guard let route=try await group.next() else { break }
@@ -87,6 +94,7 @@ struct DouyinParser: LinkParser {
                         group.cancelAll()
                         return result
                     case let .http(result):
+                        httpAlive=false
                         if result.images.isEmpty {
                             // 视频作品：HTTP 已经给全了
                             group.cancelAll()
@@ -94,14 +102,25 @@ struct DouyinParser: LinkParser {
                         }
                         // 图文：先留着，等 WebView 的动图
                         httpImageResult=result
+                        if webAlive {
+                            progress(.waitingMotions(count: result.images.count))
+                        }
                         debugPrint("[抖音] HTTP 先拿到 \(result.images.count) 张图（无动图），继续等 WebView 补动图")
                     }
                 } catch let error as DouyinExtractError {
                     webErrors.append(error)
+                    webAlive=false
+                    // 浏览器这条线死了，还在等 HTTP
+                    if httpAlive { progress(.requestingPage) }
                 } catch let error as LinkParseError {
                     httpErrors.append(error)
+                    httpAlive=false
+                    // HTTP 这条线死了，剩下的时间都在等浏览器内核
+                    if webAlive { progress(.waitingWebData) }
                 } catch {
                     webErrors.append(.failed(error.localizedDescription))
+                    webAlive=false
+                    if httpAlive { progress(.requestingPage) }
                 }
             }
 
@@ -139,8 +158,9 @@ struct DouyinParser: LinkParser {
 
     // MARK: - 链接处理
 
-    private func expandIfNeeded(_ url: URL) async throws -> URL {
+    private func expandIfNeeded(_ url: URL, progress: LinkParseProgress) async throws -> URL {
         guard let host = url.host, host.contains("v.douyin") else { return url }
+        progress(.expandingShortLink)
         return try await VideoHTTP.expandShortLink(url, ua: VideoHTTP.UA.iOSSafari)
     }
 

@@ -34,15 +34,17 @@ struct XiaohongshuParser: LinkParser {
         return Self.supportedHosts.contains(bare)
     }
 
-    func parse(url: URL) async throws -> LinkParseResult {
+    func parse(url: URL, progress: LinkParseProgress) async throws -> LinkParseResult {
         // 1. 短链先展开，拿到带 xsec_token 的真实地址
-        let pageURL = try await expandIfNeeded(url)
+        let pageURL = try await expandIfNeeded(url, progress: progress)
         debugPrint("[小红书] 展开后: \(pageURL.absoluteString)")
 
         // 2. 抓页面：先用 iOS UA；命中登录墙再换桌面 UA 重试一次（风控是概率性的）
+        progress(.requestingPage)
         var response = try await fetch(pageURL, ua: VideoHTTP.UA.iOSSafari)
         if Self.isLoginWall(response) {
             debugPrint("[小红书] iOS UA 命中登录墙，换桌面 UA 重试")
+            progress(.retryingWithDesktopUA)
             response = try await fetch(pageURL, ua: VideoHTTP.UA.desktopChrome)
         }
         if Self.isLoginWall(response) {
@@ -81,7 +83,8 @@ struct XiaohongshuParser: LinkParser {
             return result
         }
 
-        // 5. 图文：图片 + 动图
+        // 5. 图文：图片 + 动图（去水印要逐张 HEAD 探测，18 张会有一两秒）
+        progress(.checkingOriginalImages)
         let media = await Self.images(from: note)
         guard !media.images.isEmpty else {
             throw LinkParseError.emptyResult
@@ -102,8 +105,9 @@ struct XiaohongshuParser: LinkParser {
     // MARK: - 请求
 
     /// 短链展开；本身就是笔记页时原样返回（**保留查询串**）
-    private func expandIfNeeded(_ url: URL) async throws -> URL {
+    private func expandIfNeeded(_ url: URL, progress: LinkParseProgress) async throws -> URL {
         guard let host = url.host, host.contains("xhslink") else { return url }
+        progress(.expandingShortLink)
         return try await VideoHTTP.expandShortLink(url, ua: VideoHTTP.UA.iOSSafari)
     }
 

@@ -82,14 +82,79 @@ enum LinkParseError: LocalizedError {
     }
 }
 
+/// 解析过程中「现在在干嘛」——只喂给界面的状态提示，不参与任何判断。
+///
+/// 为什么需要它：抖音图文要等隐藏 WebView 5–18 秒，只显示一句「正在解析…」用户会以为卡死。
+/// 每个 case 都必须对应解析器里真实发生的下一步，**不许为了好看编阶段**。
+enum LinkParseStage: Equatable, Sendable {
+    /// 展开短链 / 跟随跳转
+    case expandingShortLink
+    /// 请求页面（纯 HTTP，一般 1 秒内回）
+    case requestingPage
+    /// 页面返回登录墙，换桌面 UA 再要一次（风控是概率性的）
+    case retryingWithDesktopUA
+    /// HTTP 与隐藏浏览器同时在跑（抖音：视频走 HTTP，图文只有页面能拿到动图）
+    case racingPageAndWebView
+    /// 浏览器页面已打开，等它自己把数据吐出来（抖音最长 18 秒）
+    case waitingWebData
+    /// HTTP 已经拿到 N 张图，还在等页面补动图
+    case waitingMotions(count: Int)
+    /// 正在逐张探测去水印原图是否可用
+    case checkingOriginalImages
+
+    var title: String {
+        switch self {
+        case .expandingShortLink:
+            return "正在展开短链…"
+        case .requestingPage:
+            return "正在请求页面…"
+        case .retryingWithDesktopUA:
+            return "页面要求登录，换桌面版重试…"
+        case .racingPageAndWebView:
+            return "正在请求页面，并启用浏览器内核…"
+        case .waitingWebData:
+            return "浏览器已打开，等待页面数据…"
+        case let .waitingMotions(count):
+            return "已拿到 \(count) 张图，正在补动图…"
+        case .checkingOriginalImages:
+            return "正在校验原图…"
+        }
+    }
+}
+
+/// 阶段上报器：解析器在关键节点调用一次，界面负责把回调抛回主线程。
+/// 调不调都不影响解析结果，所以解析器可以按需忽略。
+struct LinkParseProgress: Sendable {
+    private let handler: @Sendable (LinkParseStage) -> Void
+
+    init(_ handler: @escaping @Sendable (LinkParseStage) -> Void) {
+        self.handler = handler
+    }
+
+    func callAsFunction(_ stage: LinkParseStage) {
+        handler(stage)
+    }
+
+    /// 不关心进度时用它
+    static let silent = LinkParseProgress { _ in }
+}
+
 /// 链接解析器协议：新网站只需实现此协议并注册
 protocol LinkParser: Sendable {
     /// 网站名称（用于展示）
     var name: String { get }
     /// 是否支持解析该链接
     func canParse(_ url: URL) -> Bool
-    /// 解析链接，返回页面中的图片/视频
-    func parse(url: URL) async throws -> LinkParseResult
+    /// 解析链接，返回页面中的图片/视频。
+    /// `progress` 只用于界面提示：不实现也能正常解析。
+    func parse(url: URL, progress: LinkParseProgress) async throws -> LinkParseResult
+}
+
+extension LinkParser {
+    /// 不关心进度的调用方式
+    func parse(url: URL) async throws -> LinkParseResult {
+        try await parse(url: url, progress: .silent)
+    }
 }
 
 /// 解析器注册表：集中管理所有支持的网站
@@ -101,11 +166,11 @@ enum LinkParserRegistry {
     ]
 
     /// 按链接分发给对应解析器
-    static func parse(url: URL) async throws -> LinkParseResult {
+    static func parse(url: URL, progress: LinkParseProgress = .silent) async throws -> LinkParseResult {
         guard let parser = parsers.first(where: { $0.canParse(url) }) else {
             throw LinkParseError.unsupported
         }
-        return try await parser.parse(url: url)
+        return try await parser.parse(url: url, progress: progress)
     }
 
     /// 该链接由哪个解析器负责（nil = 不支持）
