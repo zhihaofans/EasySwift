@@ -9,6 +9,11 @@ import SwiftUI
 
 @main
 struct Easy_SwiftApp: App {
+    init() {
+        // 尽早安装：崩溃可能发生在第一帧渲染之前
+        CrashRecorder.shared.install()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

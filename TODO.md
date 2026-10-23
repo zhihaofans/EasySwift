@@ -48,18 +48,15 @@
 - [ ] **隐私清单** `PrivacyInfo.xcprivacy`：用了 UserDefaults（CA92.1）等 Required Reason API，上架前必须补（当前不打算上架，优先级最低）
 - [ ] **测试 target**：目前只能靠仓库外 `swiftc` harness 验；若要长期维护，考虑加 unit test target，先覆盖链接解析纯函数、日期换算、参数编码
 - [ ] **删除文件需要动 pbxproj**：[ContentView.swift](<Easy Swift/ContentView.swift>) 只是 `MainView()` 的跳板，合并掉可少一层；但删文件要改工程文件，单独做
-- [ ] **闪退捕获与记录**（新需求）
-      - 目标：崩溃能留下现场，用户下次打开 App 时看到「上次异常退出」的提示与摘要，而不是“突然没了”
-      - **先说清能力边界**：绝大多数崩溃（包括这次 TCC 违规的 `SIGABRT`）**拦不住也恢复不了**——进程已经被系统终止。能做到的是「记录 + 下次启动提示」，不要承诺“拦截不闪退”
-      - 采集手段（两条并行，互补）：
-        1. `NSSetUncaughtExceptionHandler` 抓 ObjC 异常（TCC 这类 aborts 有时走到这里）
-        2. 信号处理 `SIGABRT / SIGSEGV / SIGBUS / SIGILL / SIGFPE / SIGTRAP`（处理函数里只能用 `async-signal-safe` 调用，不能分配内存/打印）
-        3. （可选，最省事）`MetricKit` 的 `MXCrashDiagnostic`：系统在下次启动回调，含调用栈与崩溃类型，不需要自己写信号处理
-      - 落盘：写到 App Support 目录（如 `crash/`），下次启动主线程读取；读取后**标记已读**，避免每次启动都弹
-      - 展示：启动时若有未读崩溃 → 弹窗摘要（时间 / 异常类型 / 最后几个页面操作），可复制详情
-      - 隐私：日志里可能出现完整 URL（带货链接、分享 token），上报前要脱敏
-      - 验收：手动造一个崩溃（如强制解包 nil）→ 重启后弹出提示；正常启动不弹；连开两次只弹一次
-      - 风险：信号处理里写文件要极简（open/write/close + 预分配缓冲），复杂逻辑会引入二次崩溃
+- [x] **闪退捕获与记录**（2026-10-23 完成）
+      - 实现：`CrashRecorder` —— `NSSetUncaughtExceptionHandler` 记 ObjC 异常；信号处理器覆盖 `SIGABRT/SIGSEGV/SIGBUS/SIGILL/SIGFPE/SIGTRAP`，只做 `write` 到启动时打开的 fd（async-signal-safe）
+      - 展示：启动时读一次 → 弹「上次闪退（SIGABRT…）」→ 读完**清空文件**（不是删除），保证只提示一次
+      - 模拟器实测：对进程 `kill -ABRT` → 文件写入 16 字节（信号 6 + 时间戳）→ 重启弹窗正确 → 再启动不弹
+      - 踩坑记录：
+        - `load(fromByteOffset:)` 读偏移 4 的 Int64 会因**未对齐**直接 trap（`load from misaligned raw pointer`）→ 改 `loadUnaligned`
+        - 读完必须 `ftruncate` 而不是 `unlink`：文件被删后 fd 指向不可见的 inode，下一次崩溃会写丢
+        - 启动时打开 fd 不能用 `O_TRUNC`，否则每次启动都把上次的记录清掉
+      - 未覆盖：`MetricKit`（系统级崩溃诊断，次日回调）；ObjC 异常路径没有真实样本验证过
 
 - [ ] **解析历史记录**（新需求）
       - 目标：解析过的链接留痕，能回看、能重新打开结果

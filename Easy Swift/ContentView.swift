@@ -10,8 +10,22 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var crashReport: CrashReport?
+
     var body: some View {
         MainView()
+            .task {
+                // 上次崩溃留下的记录：读出来提示一次，读完即删
+                crashReport=CrashRecorder.shared.takePendingReport()
+            }
+            .alert(crashReport?.title ?? "上次异常退出",
+                   isPresented: Binding(get: { crashReport != nil },
+                                        set: { if !$0 { crashReport=nil } }))
+            {
+                Button("好") { crashReport=nil }
+            } message: {
+                Text(crashReport?.details ?? "")
+            }
     }
 }
 
