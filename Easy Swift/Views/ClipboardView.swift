@@ -47,14 +47,7 @@ struct ClipboardContentView: View {
                     Button(action: {
                         showingMenu=true
                     }) {
-                        Label {
-                            Text("随便记一下")
-                        } icon: {
-                            Image(systemName: "square.and.pencil")
-                                .foregroundStyle(.tint)
-                                .padding(5)
-                                .background(Circle().fill(.white))
-                        }
+                        Label("随便记一下", systemImage: "square.and.pencil")
                     }
                     .buttonStyle(.glassProminent)
                     .controlSize(.large)

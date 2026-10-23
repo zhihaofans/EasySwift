@@ -65,14 +65,7 @@ struct SearchView: View {
                         goSearch()
                     }
                 }) {
-                    Label {
-                        Text("搜索")
-                    } icon: {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.tint)
-                            .padding(5)
-                            .background(Circle().fill(.white))
-                    }
+                    Label("搜索", systemImage: "magnifyingglass")
                 }
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
@@ -81,14 +74,7 @@ struct SearchView: View {
                 Button(action: {
                     showQRCode()
                 }) {
-                    Label {
-                        Text("二维码")
-                    } icon: {
-                        Image(systemName: "qrcode")
-                            .foregroundStyle(.tint)
-                            .padding(5)
-                            .background(Circle().fill(.white))
-                    }
+                    Label("二维码", systemImage: "qrcode")
                 }
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)

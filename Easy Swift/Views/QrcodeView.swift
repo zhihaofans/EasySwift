@@ -40,14 +40,7 @@ struct QrcodeView: View {
                 Button(action: {
                     requestCameraThenPresentScanner()
                 }) {
-                    Label {
-                        Text("扫一扫")
-                    } icon: {
-                        Image(systemName: "qrcode.viewfinder")
-                            .foregroundStyle(.tint)
-                            .padding(5)
-                            .background(Circle().fill(.white))
-                    }
+                    Label("扫一扫", systemImage: "qrcode.viewfinder")
                 }
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
@@ -88,28 +81,14 @@ struct QrcodeView: View {
                         Button(action: {
                             ClipboardUtil().setString(qrcodeContent)
                         }) {
-                            Label {
-                                Text("复制文字")
-                            } icon: {
-                                Image(systemName: "arrow.right.page.on.clipboard")
-                                    .foregroundStyle(.tint)
-                                    .padding(5)
-                                    .background(Circle().fill(.white))
-                            }
+                            Label("复制文字", systemImage: "arrow.right.page.on.clipboard")
                         }
                         .buttonStyle(.glassProminent)
                         .controlSize(.large)
                         Button(action: {
                             ShareUtil().shareImage(img: qrImage)
                         }) {
-                            Label {
-                                Text("分享二维码")
-                            } icon: {
-                                Image(systemName: "square.and.arrow.up")
-                                    .foregroundStyle(.tint)
-                                    .padding(5)
-                                    .background(Circle().fill(.white))
-                            }
+                            Label("分享二维码", systemImage: "square.and.arrow.up")
                         }
                         .buttonStyle(.glassProminent)
                         .controlSize(.large)

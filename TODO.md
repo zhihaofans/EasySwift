@@ -48,6 +48,14 @@
 - [ ] **隐私清单** `PrivacyInfo.xcprivacy`：用了 UserDefaults（CA92.1）等 Required Reason API，上架前必须补（当前不打算上架，优先级最低）
 - [ ] **测试 target**：目前只能靠仓库外 `swiftc` harness 验；若要长期维护，考虑加 unit test target，先覆盖链接解析纯函数、日期换算、参数编码
 - [ ] **删除文件需要动 pbxproj**：[ContentView.swift](<Easy Swift/ContentView.swift>) 只是 `MainView()` 的跳板，合并掉可少一层；但删文件要改工程文件，单独做
+- [ ] **解析历史记录**（新需求）
+      - 目标：解析过的链接留痕，能回看、能重新打开结果
+      - 存储：SwiftData 模型（链接、平台、标题、封面 URL、图片/视频/动图数量、解析时间），列表同样只读 `@Query`，不另存一份数组
+      - 去重：同一条链接只保留最新一条（短链展开后按最终 URL 去重，先 insert 再合并）
+      - 交互：解析页顶部入口或独立页面；点进去重新解析（历史里的直链会过期，不能直接当结果用）
+      - 清理：单条删除 + 清空 + 上限裁剪（例如最近 200 条）
+      - 验收：写入 → 杀进程 → 重开后仍在；列表顺序按时间倒序；重复解析同一链接不产生两条
+
 - [ ] **动图导出为 Live Photo 存相册**（新需求）
       - 目标：解析结果里的动图（`motions[i]` + `images[i]`）能一键存成相册里的实况照片，而不是一张静态图 + 一段孤立视频
       - 技术路径：`PHLivePhoto.request(withResourceFileURLs:placeholderImage:targetSize:contentMode:)` 先合成 → `PHPhotoLibrary.performChanges` 里用 `PHAssetCreationRequest` 分别 `addResource(with: .photo)` 与 `addResource(with: .pairedVideo)`

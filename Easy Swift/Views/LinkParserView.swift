@@ -25,10 +25,8 @@ struct LinkParserView: View {
     @State private var showingAlert=false
     @State private var alertTitle="未知错误"
     @State private var alertText="未知错误"
-    @State private var previewFileURL: URL?
-    @State private var isPreparingPreview=false
-    @State private var previewProgress: Double=0
-    @State private var previewDownloadTask: Task<Void, Never>?
+    /// 就地预览：走通用组件 `.mediaPreview(_:)`，不再下载到临时文件交给 QuickLook
+    @State private var previewRequest: MediaPreviewRequest?
     @State private var showingWebParser=false
     @State private var webParseURL: URL?
     @State private var webParseStatus: WebParserStatus = .loading
@@ -41,11 +39,6 @@ struct LinkParserView: View {
     /// 撞墙时是"没登录"还是"过期了"，决定弹窗文案
     @State private var loginPromptExpired=false
     @State private var retryTrigger: UUID?
-    #if os(macOS)
-    @State private var showingAppPicker=false
-    @State private var videoAppChoices: [URL]=[]
-    @State private var pendingVideoFile: URL?
-    #endif
 
     var body: some View {
         VStack(spacing: 16) {
@@ -73,14 +66,8 @@ struct LinkParserView: View {
                     inputFocused=false
                     parseLink()
                 }) {
-                    Label {
-                        Text("解析链接")
-                    } icon: {
-                        Image(systemName: "link")
-                            .foregroundStyle(.tint)
-                            .padding(5)
-                            .background(Circle().fill(.white))
-                    }
+                    // 用系统图标 + glassProminent，不要自己套白色圆形底
+                    Label("解析链接", systemImage: "link")
                 }
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
@@ -114,49 +101,8 @@ struct LinkParserView: View {
             Text(alertText)
         }
         .setNavigationTitle("链接解析")
+        .mediaPreview($previewRequest)
         // 单点全屏预览：iOS 用系统 QuickLook 预览本地文件
-        .quickLookPreview($previewFileURL)
-        // 预览下载中的加载提示
-        .overlay {
-            if isPreparingPreview {
-                ZStack {
-                    Color.black.opacity(0.15)
-                    VStack(spacing: 12) {
-                        ProgressView(value: previewProgress)
-                            .progressViewStyle(.linear)
-                            .frame(width: 180)
-                        Text("正在加载预览... \(Int(previewProgress * 100))%")
-                            .font(.subheadline)
-                        Button("取消加载") {
-                            cancelPreviewDownload()
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    .padding(20)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .ignoresSafeArea()
-            }
-        }
-        #if os(macOS)
-        // macOS 视频：选择打开方式（枚举系统可打开该视频的 App）
-        .confirmationDialog("选择打开方式", isPresented: $showingAppPicker, titleVisibility: .visible) {
-            ForEach(videoAppChoices, id: \.self) { appURL in
-                Button(appDisplayName(appURL)) {
-                    if let fileURL=pendingVideoFile {
-                        NSWorkspace.shared.open([fileURL], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration()) { _, error in
-                            if let error {
-                                Task { @MainActor in
-                                    showAlert(title: "打开失败", text: error.localizedDescription)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Button("取消", role: .cancel) {}
-        }
-        #endif
         // 抖音等 SPA 页面：HTML 解析失败时用 WebView 执行 JS 兜底
         .sheet(isPresented: $showingWebParser) {
             if let url=webParseURL {
@@ -271,12 +217,12 @@ struct LinkParserView: View {
                                 }
                                 // 单点：有动图就播动图，否则看静态图
                                 .onTapGesture {
-                                    previewItem(motion ?? url)
+                                    openPreview(result: result, tapped: motion.map { .video($0) } ?? .image(url))
                                 }
                                 .contextMenu {
                                     if let motion {
-                                        Button("播放动图") { previewItem(motion) }
-                                        Button("查看静态图") { previewItem(url) }
+                                        Button("播放动图") { openPreview(result: result, tapped: .video(motion)) }
+                                        Button("查看静态图") { openPreview(result: result, tapped: .image(url)) }
                                     }
                                     Button("用浏览器打开") { openURL(url) }
                                 }
@@ -290,7 +236,7 @@ struct LinkParserView: View {
                     ForEach(result.videos, id: \.self) { url in
                         Button {
                             // 单点：全屏预览
-                            previewItem(url)
+                            openPreview(result: result, tapped: .video(url))
                         } label: {
                             Label("视频链接", systemImage: "play.rectangle")
                                 .foregroundStyle(.tint)
@@ -411,79 +357,31 @@ struct LinkParserView: View {
         return ""
     }
 
-    // 单点全屏预览：下载到本地临时文件后
-    //  - macOS：图片交给系统"预览"App；视频弹出"选择打开方式"（枚举系统可打开视频的 App）
-    //  - iOS：QuickLook 预览本地文件（有正确扩展名，避免 remote URL 类型推断失败）
-    // HLS 视频流（m3u8）预览 App 不支持，直接浏览器播放
-    private func previewItem(_ url: URL) {
-        if url.pathExtension.lowercased() == "m3u8" {
-            openURL(url)
-            return
-        }
-        // 取消可能仍在进行的下载
-        previewDownloadTask?.cancel()
-        Task { @MainActor in
-            isPreparingPreview=true
-            previewProgress=0
-        }
-        previewDownloadTask=Task {
-            do {
-                let fileURL=try await downloadToTempFile(url) { progress in
-                    Task { @MainActor in
-                        previewProgress=progress
-                    }
-                }
-                try Task.checkCancellation()
-                #if os(macOS)
-                if isVideoURL(fileURL) {
-                    let apps=appsThatCanOpen(fileURL)
-                    await MainActor.run {
-                        isPreparingPreview=false
-                        if apps.isEmpty {
-                            // 没有可选的 App 时直接用默认打开
-                            NSWorkspace.shared.open(fileURL)
-                        } else {
-                            videoAppChoices=apps
-                            pendingVideoFile=fileURL
-                            showingAppPicker=true
-                        }
-                    }
-                } else {
-                    await MainActor.run {
-                        isPreparingPreview=false
-                        NSWorkspace.shared.open(fileURL)
-                    }
-                }
-                #else
-                await MainActor.run {
-                    isPreparingPreview=false
-                    previewFileURL=fileURL
-                }
-                #endif
-            } catch {
-                await MainActor.run {
-                    isPreparingPreview=false
-                    // 用户主动取消：静默关闭，不弹错误
-                    if !Task.isCancelled {
-                        showAlert(title: "预览失败", text: "下载失败：\(error.localizedDescription)")
-                    }
-                }
+    // MARK: - 就地预览
+
+    /// 把解析结果摊平成一串可翻页的条目。
+    /// 动图紧跟在它的静态图后面：点带「动图」角标的缩略图直接播，滑一下能看静态图。
+    private func previewList(for result: LinkParseResult) -> [MediaPreviewItem] {
+        var items: [MediaPreviewItem]=[]
+        for (index, image) in result.images.enumerated() {
+            items.append(.image(image))
+            if let motion=result.motions[index] {
+                items.append(.video(motion))
             }
         }
+        for video in result.videos {
+            items.append(.video(video))
+        }
+        return items
     }
 
-    // 手动取消预览下载（网络差/视频太大时）
-    private func cancelPreviewDownload() {
-        previewDownloadTask?.cancel()
-        previewDownloadTask=nil
-        isPreparingPreview=false
-        previewProgress=0
-    }
-
-    // 是否为常见视频文件扩展名
-    private func isVideoURL(_ url: URL) -> Bool {
-        let ext=url.pathExtension.lowercased()
-        return ["mp4", "mov", "m4v", "webm", "avi", "mkv", "flv", "wmv", "3gp"].contains(ext)
+    /// 打开预览。`tapped` 是要定位的那一条（带动图的缩略图会直接定位到动图）
+    private func openPreview(result: LinkParseResult, tapped: MediaPreviewItem) {
+        let items=previewList(for: result)
+        guard let index=items.firstIndex(of: tapped) ?? items.firstIndex(where: { $0.url == tapped.url }) else {
+            return
+        }
+        previewRequest=MediaPreviewRequest(items: items, startIndex: index)
     }
 
     #if os(macOS)
