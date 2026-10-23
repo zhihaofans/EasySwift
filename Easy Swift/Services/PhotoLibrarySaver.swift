@@ -18,16 +18,34 @@ import SwiftUtils
 import UniformTypeIdentifiers
 
 enum PhotoLibrarySaver {
-    /// 只申请"写入"权限：我们不需要读用户的相册
-    static func requestAddAccess() async -> Bool {
-        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-        debugPrint("[相册] 写入权限状态=\(status.rawValue)")
-        return status == .authorized || status == .limited
+    /// 只申请"写入"权限：我们不需要读用户的相册。
+    ///
+    /// 不再返回 `Bool`：`.denied`（用户能改）和 `.restricted`（系统限制，改了也没用）
+    /// 对用户是两件事，压成一个 `false` 就只能给同一句误导性文案。
+    static func ensureAddAccess() async throws {
+        let current = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        debugPrint("[相册] 写入权限状态=\(current.rawValue)")
+        switch current {
+        case .authorized, .limited:
+            return
+        case .notDetermined:
+            let granted = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+            debugPrint("[相册] 首次授权结果=\(granted.rawValue)")
+            guard granted == .authorized || granted == .limited else {
+                throw MediaSaveError.permissionDenied
+            }
+        case .denied:
+            throw MediaSaveError.permissionDenied
+        case .restricted:
+            throw MediaSaveError.permissionRestricted
+        @unknown default:
+            throw MediaSaveError.permissionDenied
+        }
     }
 
     /// 保存一张图片；`motion` 非空时合成为实况照片
     static func save(image remoteImage: URL, motion remoteMotion: URL? = nil) async throws {
-        guard await requestAddAccess() else { throw MediaSaveError.permissionDenied }
+        try await ensureAddAccess()
 
         let imageFile = try await MediaDownloader.download(remoteImage)
         defer { try? FileManager.default.removeItem(at: imageFile) }
@@ -61,7 +79,7 @@ enum PhotoLibrarySaver {
 
     /// 保存视频
     static func save(video remoteVideo: URL) async throws {
-        guard await requestAddAccess() else { throw MediaSaveError.permissionDenied }
+        try await ensureAddAccess()
         let file = try await MediaDownloader.download(remoteVideo)
         defer { try? FileManager.default.removeItem(at: file) }
         try await addToLibrary {
@@ -108,6 +126,17 @@ enum LivePhotoPair {
         let identifier = UUID().uuidString
         let imageURL = try embedIdentifier(inStill: still, identifier: identifier)
         let videoURL = try await embedIdentifier(inMovie: motion, identifier: identifier)
+
+        // 写完必须回读校验：`AVAssetExportSession.metadata` 不是「设置了就一定写到容器里」，
+        // 一旦没写进去，相册只会得到「一张照片 + 一段孤儿视频」，而 performChanges 照样不报错。
+        // 这一步不需要相册读权限，所以真机上也能验。
+        let stillID = readStillIdentifier(imageURL)
+        let movieID = try await readMovieIdentifier(videoURL)
+        guard stillID == identifier, movieID == identifier else {
+            throw MediaSaveError.livePhotoBuildFailed(
+                "配对标识没写进文件（图=\(stillID ?? "nil") 视频=\(movieID ?? "nil")）")
+        }
+        debugPrint("[相册] 实况照片配对标识一致: \(identifier)")
         return (imageURL, videoURL)
     }
 
@@ -147,9 +176,6 @@ enum LivePhotoPair {
             .appendingPathComponent("easyswift-live-\(UUID().uuidString).mov")
         try? FileManager.default.removeItem(at: output)
 
-        session.outputURL = output
-        session.outputFileType = .mov
-
         let item = AVMutableMetadataItem()
         item.keySpace = .quickTimeMetadata
         item.key = "com.apple.quicktime.content.identifier" as NSString
@@ -157,6 +183,7 @@ enum LivePhotoPair {
         session.metadata = [item]
 
         if #available(iOS 18.0, macOS 15.0, *) {
+            // export(to:as:) 自己管输出，不要再碰 outputURL/outputFileType（新 SDK 已废弃）
             try await session.export(to: output, as: .mov)
         } else {
             session.outputURL = output
@@ -167,5 +194,27 @@ enum LivePhotoPair {
             }
         }
         return output
+    }
+
+    // MARK: - 回读校验
+
+    /// 读静态图里的 MakerApple[17]
+    private static func readStillIdentifier(_ url: URL) -> String? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let maker = properties[kCGImagePropertyMakerAppleDictionary] as? [String: Any]
+        else { return nil }
+        return maker["17"] as? String
+    }
+
+    /// 读 MOV 里的 com.apple.quicktime.content.identifier
+    private static func readMovieIdentifier(_ url: URL) async throws -> String? {
+        let asset = AVURLAsset(url: url)
+        for item in try await asset.load(.metadata) {
+            guard let key = item.key as? String,
+                  key == "com.apple.quicktime.content.identifier" else { continue }
+            return try await item.load(.stringValue)
+        }
+        return nil
     }
 }

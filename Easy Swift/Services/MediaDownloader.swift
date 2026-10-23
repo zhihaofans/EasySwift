@@ -82,19 +82,31 @@ enum MediaDownloader {
 
 /// 保存相关的错误：文案直接面向用户，不要出现状态码以外的技术词
 enum MediaSaveError: LocalizedError {
+    /// 用户拒绝过、或刚在授权弹窗里点了不允许 —— 能靠用户自己去设置改
     case permissionDenied
-    case permissionUndetermined
+    /// 被系统限制（屏幕使用时间 / 描述文件 / MDM）—— 去设置里也改不了，文案不能骗人
+    case permissionRestricted
     case downloadFailed(String)
     case invalidImage
     case livePhotoBuildFailed(String)
     case saveFailed(String)
 
+    /// 权限类错误：批量保存时应该整批停下，而不是逐张失败
+    var isPermissionProblem: Bool {
+        switch self {
+        case .permissionDenied, .permissionRestricted:
+            return true
+        default:
+            return false
+        }
+    }
+
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
             return "没有相册写入权限，请到「设置 → 隐私与安全性 → 照片」里允许"
-        case .permissionUndetermined:
-            return "还没获得相册权限"
+        case .permissionRestricted:
+            return "相册权限被系统限制（屏幕使用时间或描述文件），需要先解除限制"
         case let .downloadFailed(reason):
             return "下载失败：\(reason)"
         case .invalidImage:
