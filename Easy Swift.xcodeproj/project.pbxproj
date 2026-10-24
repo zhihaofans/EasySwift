@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA00C1A00000000000000002 /* CrashKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA00C1A00000000000000001 /* CrashKit */; };
 		267CD6512CF36C6200126C7D /* SwiftUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 267CD6502CF36C6200126C7D /* SwiftUtils */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				267CD6512CF36C6200126C7D /* SwiftUtils in Frameworks */,
+				AA00C1A00000000000000002 /* CrashKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			name = "Easy Swift";
 			packageProductDependencies = (
 				267CD6502CF36C6200126C7D /* SwiftUtils */,
+				AA00C1A00000000000000001 /* CrashKit */,
 			);
 			productName = "Easy Swift";
 			productReference = 267CD63D2CF36BCC00126C7D /* Easy Swift.app */;
@@ -108,6 +111,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				267CD64F2CF36C6200126C7D /* XCRemoteSwiftPackageReference "SwiftUtils" */,
+				AA00C1A00000000000000003 /* XCRemoteSwiftPackageReference "CrashKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 267CD63E2CF36BCC00126C7D /* Products */;
@@ -268,7 +272,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Easy Swift/Easy_Swift.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Easy Swift/Preview Content\"";
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -294,7 +298,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -315,7 +319,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Easy Swift/Easy_Swift.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Easy Swift/Preview Content\"";
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -341,7 +345,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -378,6 +382,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		AA00C1A00000000000000003 /* XCRemoteSwiftPackageReference "CrashKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/zhihaofans/CrashKit";
+			requirement = {
+				kind = exactVersion;
+				version = 0.1.0;
+			};
+		};
 		267CD64F2CF36C6200126C7D /* XCRemoteSwiftPackageReference "SwiftUtils" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/zhihaofans/SwiftUtils";
@@ -389,6 +401,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		AA00C1A00000000000000001 /* CrashKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA00C1A00000000000000003 /* XCRemoteSwiftPackageReference "CrashKit" */;
+			productName = CrashKit;
+		};
 		267CD6502CF36C6200126C7D /* SwiftUtils */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 267CD64F2CF36C6200126C7D /* XCRemoteSwiftPackageReference "SwiftUtils" */;

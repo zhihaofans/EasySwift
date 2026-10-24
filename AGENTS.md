@@ -51,6 +51,19 @@ xcrun simctl io "<设备名>" screenshot /tmp/easy-swift.png
   `xcodebuild -showBuildSettings -project "Easy Swift.xcodeproj" -scheme "Easy Swift" -destination '...' | grep -m1 BUILT_PRODUCTS_DIR`。
 - 构建需要能写 `~/Library/Developer`（DerivedData）与 SwiftPM 缓存。受限沙箱里会报
   `Operation not permitted ... ModuleCache` 或 `Missing package product 'SwiftUtils'`——那是**环境权限问题，不是代码问题**，先说清楚再动手。
+- **CrashKit 是远端 SPM 依赖**（`https://github.com/zhihaofans/CrashKit`，`exactVersion 0.1.0`）。
+  本地开发副本在 `../CrashKit`（独立 git 仓库），**改库的流程**：在本地仓库改 → `swift test` → 提交 →
+  打新 tag → 推 → 回来把 `project.pbxproj` 的 `exactVersion` 抬到新版本并 `-resolvePackageDependencies`。
+  本地副本不在工程里，改它需要工作区外的读写权限。
+  它自己跑测试（不经过工程，最快）：
+  ```bash
+  cd ../CrashKit
+  TMPDIR="$PWD/.build/tmp" SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/modulecache" \
+  CLANG_MODULE_CACHE_PATH="$PWD/.build/modulecache" \
+  swift test --scratch-path .build/scratch --cache-path .build/cache \
+             --manifest-cache none --disable-sandbox
+  ```
+  三个坑：默认模块缓存写在 `~/Library`（沙箱不给）；SwiftPM 自带的 `sandbox-exec` 会和外层沙箱打架（`--disable-sandbox`）；`TMPDIR` 也要指到可写目录。
 - 只跑 `xcodebuild` 不算验证（见 §5）。
 
 ## 3. 不可违反的约定

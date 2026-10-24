@@ -36,5 +36,7 @@ playground.xcworkspace
 ### Swift Package Manager
 .build/
 .swiftpm/
+# 绕沙箱时临时用的缓存目录（见 AGENTS §2），别提交
+.build-home/
 
 # Package.resolved 建议提交，故不忽略

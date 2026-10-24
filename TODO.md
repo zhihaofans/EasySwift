@@ -103,6 +103,24 @@
       - 本工程暂时不受影响（两个键都在，因为回读 `verifyLatestIsLivePhoto()` 需要读权限），但**一旦有人删掉读权限的键，保存就会整体失败** —— 改库时要连带检查这一条
       - 顺带确认：`PermissionUtil` 的 `request` 回调是否仍固定在主队列（App 侧现在是 `Task { @MainActor in … }` 兜住，但库的契约最好写清并在测试里钉住）
 
+### CrashKit 抽库（计划 B → A）
+
+- [x] **B：仓库内独立模块**（2026-10-24 完成）
+      - [Packages/CrashKit](Packages/CrashKit)：`CrashKit` 模块 + 16 个测试（全绿），README 里写了接入方式、能力边界、四条硬约束
+      - Easy Swift 侧：删掉 `Services/CrashRecorder.swift`，`project.pbxproj` 加 `XCLocalSwiftPackageReference`；`Easy_SwiftApp` 用 `CrashRecorder.shared.install(options:)`，`ContentView` 只多一行 `import CrashKit`
+      - 端到端验证：模拟器里 `kill -ABRT` → 容器 `pending-signal.bin` 16 字节（`CK01` + 信号 6 + 时间戳）→ 重启弹「上次闪退（SIGABRT）」→ 文件被清空（保留文件、fd 不断）
+      - 版本号规则：从这次开始 Easy Swift 每批改动都动 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`（本次定位 **0.2.0 (2)**）
+- [x] **包挪出工程**（2026-10-24）：已移到 `../CrashKit`（与 Easy Swift 同级，独立 git 仓库，
+      commit `067310e` + tag `0.1.0`），工程用 `XCLocalSwiftPackageReference` 的 `relativePath = ../CrashKit` 引用；
+      工作区里的 `Packages/` 已删除，`Package.resolved` 里记的是 `CrashKit: … @ local`
+      - 注意：改这个包等于改另一个仓库，需要工作区外的读写权限
+- [x] **A：推成独立仓库**（2026-10-24 完成）：已推到 https://github.com/zhihaofans/CrashKit（tag `0.1.0`，
+      commit `067310e`）；工程切到 `XCRemoteSwiftPackageReference` + `exactVersion 0.1.0`，
+      `Package.resolved` 里是 `crashkit 0.1.0 / 067310e0610b`；三档构建全绿，模拟器里仍打印
+      `[CrashKit] 已安装，目录=CrashKit，信号=[6, 11, 10, 4, 8, 5]，fd=4`
+      - 改库流程（AGENTS §2 也写了）：本地副本 `../CrashKit` 改 → `swift test` → 提交 → 打 tag → 推 →
+        回来抬 `exactVersion` + `-resolvePackageDependencies`
+
 ## 四、需要决策（先别动）
 
 - [x] 部署目标从 iOS 26 / macOS 26 提到 **27**（2026-10-24 定）：本机没有 27 以下的设备，不必为兼容留 `#available` 分支，已顺手删掉 `LivePhotoPair` 里那段 iOS 18 / macOS 15 的兜底

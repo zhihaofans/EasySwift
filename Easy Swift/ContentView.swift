@@ -7,6 +7,7 @@
 //  Created by zzh on 2024/11/24.
 //
 
+import CrashKit
 import SwiftUI
 
 struct ContentView: View {

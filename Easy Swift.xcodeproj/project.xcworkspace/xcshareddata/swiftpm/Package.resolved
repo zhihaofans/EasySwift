@@ -1,6 +1,15 @@
 {
-  "originHash" : "126333d246af66554a405c7a6af8dbd8704b1d6ddbcf99a8643e76ec79a02457",
+  "originHash" : "7278c5fee6e2b61086ea6168463a6d478dc02e208ab6ad1e0707602db4405bb3",
   "pins" : [
+    {
+      "identity" : "crashkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/zhihaofans/CrashKit",
+      "state" : {
+        "revision" : "067310e0610bb65ea757316f1b88e6ded99df017",
+        "version" : "0.1.0"
+      }
+    },
     {
       "identity" : "swift-log",
       "kind" : "remoteSourceControl",
