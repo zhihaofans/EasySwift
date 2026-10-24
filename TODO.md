@@ -93,6 +93,15 @@
       - 踩坑：**`TimelineView(.periodic(from:by:))` 的秒数会永远落后**。schedule 从 `from`（解析开始时刻）起发条目，而视图是几秒后才建的，实测显示「3 秒」时实际已等 7 秒 —— 换成 `.task(id: parseStartedAt)` 里每秒 `Date().timeIntervalSince(start)` 重算
       - **未验证**：小红书只用了一条无 `xsec_token` 的笔记 URL（CLI 里读钥匙串取 cookie 会卡住，未跑完），小红书的两条阶段文案仍待在真机上确认
 
+### 外部库（SwiftUtils 仓库）待办 —— 下次动库时记得先看这里
+
+- [ ] **`PermissionUtil.requiredInfoPlistKeys(for: .photoLibraryAddOnly)` 要求过严**（2026-10-24 记录）
+      - 现状：它返回 `["NSPhotoLibraryAddUsageDescription", "NSPhotoLibraryUsageDescription"]`，两个键缺一个就 `request` 直接返回 `.unavailable`（不弹框、不崩溃）
+      - 问题：按 `.addOnly` 的语义只需要 `NSPhotoLibraryAddUsageDescription`。只做"保存到相册"、不读相册的宿主工程会莫名其妙被判成「系统相册不可用」
+      - 改法：`.photoLibraryAddOnly` 只要求 Add 那个键；`.photoLibraryReadWrite` 才要 `NSPhotoLibraryUsageDescription`
+      - 本工程暂时不受影响（两个键都在，因为回读 `verifyLatestIsLivePhoto()` 需要读权限），但**一旦有人删掉读权限的键，保存就会整体失败** —— 改库时要连带检查这一条
+      - 顺带确认：`PermissionUtil` 的 `request` 回调是否仍固定在主队列（App 侧现在是 `Task { @MainActor in … }` 兜住，但库的契约最好写清并在测试里钉住）
+
 ## 四、需要决策（先别动）
 
 - [ ] 部署目标是否从 iOS 26 提到 iOS 27：Duo 要 27.1 才跑得起来，若要求「必须有 Duo 体验」就得提；不要求则只在可用机型上验证
@@ -149,6 +158,8 @@
 
 - [x] SwiftUtils `0.0.22 → 0.0.26`，`HttpUtil` 迁到纯 Foundation，工程不再依赖 Alamofire
 - [x] SwiftUtils `0.0.26 → 0.0.27`（钥匙串改数据保护钥匙串，见上）
+- [x] 相册权限判断收敛到 SwiftUtils `PermissionUtil`（2026-10-24）：`ensureAddAccess` 不再自己 switch `PHAuthorizationStatus`，只保留「状态 → 错误」的纯函数 `accessError(for:)`；新增 `.libraryUnavailable`（平台不支持 / 缺用法说明），`isPermissionProblem` 一并覆盖
+- [x] SwiftUtils `0.0.27 → 0.0.28`（2026-10-24）：补齐 `PermissionUtil`（权限状态分档 / 能力探测 / Info.plist 键检查），`CameraUtil().checkCameraPermissions(success:fail:)` 改为它的封装、签名不变。钥匙串部分无改动，0.0.27 的真机结论仍然有效
 - [x] `debugPrint` 每行 `fflush(stdout)`（2026-10-24）：真机 stdout 是管道、按块缓冲，日志会攒到 4KB 才吐 —— 真机排查相册保存时最后 3 条成功日志一直不出现，差点被当成"保存卡死"
 - [x] 真机调试三条命令（`devicectl`）：`process launch --console` 抓日志、`capture screenshot` 截屏、`pasteboard copy/paste` 塞/取剪贴板；注意 `--console` 会绑定进程生命周期，结束 devicectl 会把 App 一起结束
 - [x] `ClipboardView` 的 `@State` 初始化顺序编译错误

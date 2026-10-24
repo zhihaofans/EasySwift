@@ -86,15 +86,17 @@ enum MediaSaveError: LocalizedError {
     case permissionDenied
     /// 被系统限制（屏幕使用时间 / 描述文件 / MDM）—— 去设置里也改不了，文案不能骗人
     case permissionRestricted
+    /// 相册能力本身不可用（平台不支持，或 Info.plist 缺用法说明）—— 不是"被拒绝"，别引导去设置
+    case libraryUnavailable
     case downloadFailed(String)
     case invalidImage
     case livePhotoBuildFailed(String)
     case saveFailed(String)
 
-    /// 权限类错误：批量保存时应该整批停下，而不是逐张失败
+    /// 权限/能力类错误：批量保存时应该整批停下，而不是逐张失败
     var isPermissionProblem: Bool {
         switch self {
-        case .permissionDenied, .permissionRestricted:
+        case .permissionDenied, .permissionRestricted, .libraryUnavailable:
             return true
         default:
             return false
@@ -107,6 +109,8 @@ enum MediaSaveError: LocalizedError {
             return "没有相册写入权限，请到「设置 → 隐私与安全性 → 照片」里允许"
         case .permissionRestricted:
             return "相册权限被系统限制（屏幕使用时间或描述文件），需要先解除限制"
+        case .libraryUnavailable:
+            return "系统相册不可用（当前平台不支持），换一台设备或平台再试"
         case let .downloadFailed(reason):
             return "下载失败：\(reason)"
         case .invalidImage:

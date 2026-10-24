@@ -383,7 +383,7 @@
 			repositoryURL = "https://github.com/zhihaofans/SwiftUtils";
 			requirement = {
 				kind = exactVersion;
-				version = 0.0.27;
+				version = 0.0.28;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

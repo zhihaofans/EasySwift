@@ -17,7 +17,8 @@
 - 单 target 的 SwiftUI 多平台工具集：**iOS 26 / macOS 26**，Swift 5 语言模式，各功能页互不依赖。
 - 入口 [Easy_SwiftApp.swift](<Easy Swift/Easy_SwiftApp.swift>) → [ContentView.swift](<Easy Swift/ContentView.swift>) → [MainView.swift](<Easy Swift/Views/MainView.swift>)；新功能页在 `MainView.mainList()` 里注册 `NavigationLink` 才会出现在首页。
 - 分层：[Views/](<Easy Swift/Views>)（页面）、[Views/Componets/](<Easy Swift/Views/Componets>)（共用小件）、[Services/](<Easy Swift/Services>)（网络与解析）、[Models/](<Easy Swift/Models>)（SwiftData + Codable）、[Utils/](<Easy Swift/Utils>)（平台差异、日志、分享）。
-- 依赖：**SwiftUtils（exactVersion 0.0.27）+ swift-log**。0.0.26 起已剥离 Alamofire，工程不再依赖它；`HttpUtil` 是纯 Foundation 实现，`setHeader` 收 `[String: String]`，回调固定在主队列。0.0.27 起 `KeychainUtil` 改用数据保护钥匙串（见 §3.2）。
+- 依赖：**SwiftUtils（exactVersion 0.0.28）+ swift-log**。0.0.26 起已剥离 Alamofire，工程不再依赖它；`HttpUtil` 是纯 Foundation 实现，`setHeader` 收 `[String: String]`，回调固定在主队列。0.0.27 起 `KeychainUtil` 改用数据保护钥匙串（见 §3.2）。0.0.28 补齐 `PermissionUtil`（权限状态分档 + 能力探测 + Info.plist 键检查），`CameraUtil().checkCameraPermissions(...)` 已改为它的封装，签名不变。
+  - 下次动库（发新版本）前先看 [TODO.md](TODO.md) 的「外部库（SwiftUtils 仓库）待办」一节，那里记着已知的库侧问题。
 - 版本唯一真相源是 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`；代码只经 `AppUtil().getAppVersion()` / `getAppBuild()` 读 `Bundle`，不写常量。
 - 文案走 String Catalog（[Localizable.xcstrings](<Easy Swift/Localizable.xcstrings>)，源语言 `zh-Hans`）：直接写中文即可，构建时自动收集，不要手写英文再翻译。
 - **没有测试 target**（见 §5 的替代验证手段）。

@@ -20,26 +20,40 @@ import UniformTypeIdentifiers
 enum PhotoLibrarySaver {
     /// 只申请"写入"权限：我们不需要读用户的相册。
     ///
-    /// 不再返回 `Bool`：`.denied`（用户能改）和 `.restricted`（系统限制，改了也没用）
-    /// 对用户是两件事，压成一个 `false` 就只能给同一句误导性文案。
+    /// 状态判断收敛到 SwiftUtils 的 `PermissionUtil`（0.0.28 起）：它把「没问过 / 用户拒绝 /
+    /// 系统限制 / 平台不支持 / Info.plist 缺用法说明」分成不同状态。这里只做
+    /// 「状态 → 用户看得懂的错误」这一步，映射写成纯函数，便于单独验。
+    ///
+    /// - Note: `PermissionUtil` 对 `.photoLibraryAddOnly` 要求
+    ///   `NSPhotoLibraryAddUsageDescription` **和** `NSPhotoLibraryUsageDescription` 都在，
+    ///   缺任一会直接返回 `.unavailable`（不弹框、不崩溃）。这两个键都在工程里，别删。
     static func ensureAddAccess() async throws {
-        let current = PHPhotoLibrary.authorizationStatus(for: .addOnly)
-        debugPrint("[相册] 写入权限状态=\(current.rawValue)")
-        switch current {
-        case .authorized, .limited:
-            return
-        case .notDetermined:
-            let granted = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-            debugPrint("[相册] 首次授权结果=\(granted.rawValue)")
-            guard granted == .authorized || granted == .limited else {
-                throw MediaSaveError.permissionDenied
+        let status = await withCheckedContinuation { (continuation: CheckedContinuation<PermissionStatus, Never>) in
+            PermissionUtil().request(.photoLibraryAddOnly) { status in
+                continuation.resume(returning: status)
             }
-        case .denied:
-            throw MediaSaveError.permissionDenied
+        }
+        debugPrint("[相册] 写入权限状态=\(status)")
+        if let error = accessError(for: status) {
+            throw error
+        }
+    }
+
+    /// 权限状态 → 错误（`nil` = 可以写）。
+    /// 拆成纯函数的目的：仓库没有测试 target，这条映射要能用仓库外 harness 逐个状态断言，
+    /// 而不是靠"存一次相册看看"。
+    static func accessError(for status: PermissionStatus) -> MediaSaveError? {
+        switch status {
+        case .authorized, .limited:
+            // 相册没有"部分写入"，limited 只对读写相册成立，这里一并放行
+            return nil
+        case .denied, .notDetermined:
+            // notDetermined 走到这里说明系统没弹框（极少见），按"没拿到权限"处理并留日志
+            return .permissionDenied
         case .restricted:
-            throw MediaSaveError.permissionRestricted
-        @unknown default:
-            throw MediaSaveError.permissionDenied
+            return .permissionRestricted
+        case .unavailable, .unknown:
+            return .libraryUnavailable
         }
     }
 
