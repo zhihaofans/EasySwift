@@ -40,7 +40,7 @@ class GithubTrendingService {
 //                debugPrint(value)
                 do {
                     let result = try JSONDecoder().decode(GithubTrendingResult.self, from: value.data(using: .utf8)!)
-                    debugPrint(result.total_count)
+                    debugPrint("[GitHub] 趋势列表 total_count=\(result.total_count)")
                     callback(result)
                 } catch {
                     debugPrint(error)

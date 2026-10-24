@@ -28,7 +28,7 @@ class GithubUserService {
     func getStarsList(callback: @escaping ([GithubTrendingItem])->Void, fail: @escaping (GithubApiResultErrorModel)->Void) {
         let username = GithubLoginService().getUserName()
         let url = "https://api.github.com/users/\(username)/starred"
-        debugPrint(url)
+        debugPrint("[GitHub] 取星标列表: \(url)")
         http.get(url) { value in
             if value.isEmpty {
                 fail(GithubApiResultErrorModel(message: "getStarsList.result.isEmpty", documentation_url: ""))

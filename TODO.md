@@ -51,6 +51,7 @@
 - [x] **iPad 方向配置笔误**（2026-10-23 修）：`project.pbxproj` 的 `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad` 末尾多了 `Easy Swift`（两处配置都有），已删；合法值只剩四个 `UIInterfaceOrientation*`
 - [x] **二维码内容与「复制文字」不一致**（2026-10-23 修）：[QrcodeView.swift](<Easy Swift/Views/QrcodeView.swift>) 取消生成前的 `EncodeUtil().urlDecode`，统一为**原文**——输入框、二维码、复制三处同一个字符串
       —— 原来那样还有一个更隐蔽的后果：扫进来的链接本身带 `%XX`，再生成会被二次解码，扫回去已经不是同一个码
+      - 真机验证（2026-10-24）：输入 `https://example.com/a%20b?q=%E4%B8%AD` → 设备截屏后用 Vision 解二维码，得到**原样**字符串（`%20`、`%E4%B8%AD` 都没被解掉）；另用纯数字 `280920138209502000` 验过「二维码 = 输入框文本 = 复制文字」三者一致
 - [ ] **隐私清单** `PrivacyInfo.xcprivacy`：用了 UserDefaults（CA92.1）等 Required Reason API，上架前必须补（当前不打算上架，优先级最低）
 - [ ] **测试 target**：目前只能靠仓库外 `swiftc` harness 验；若要长期维护，考虑加 unit test target，先覆盖链接解析纯函数、日期换算、参数编码
 - [ ] **删除文件需要动 pbxproj**：[ContentView.swift](<Easy Swift/ContentView.swift>) 只是 `MainView()` 的跳板，合并掉可少一层；但删文件要改工程文件，单独做
