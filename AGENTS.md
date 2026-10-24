@@ -14,7 +14,7 @@
 
 ## 1. 项目速览
 
-- 单 target 的 SwiftUI 多平台工具集：**iOS 26 / macOS 26**，Swift 5 语言模式，各功能页互不依赖。
+- 单 target 的 SwiftUI 多平台工具集：**iOS 27 / macOS 27**（2026-10-24 提的，本机没有 27 以下的设备，所以不需要写 `#available` 兜底），Swift 5 语言模式，各功能页互不依赖。
 - 入口 [Easy_SwiftApp.swift](<Easy Swift/Easy_SwiftApp.swift>) → [ContentView.swift](<Easy Swift/ContentView.swift>) → [MainView.swift](<Easy Swift/Views/MainView.swift>)；新功能页在 `MainView.mainList()` 里注册 `NavigationLink` 才会出现在首页。
 - 分层：[Views/](<Easy Swift/Views>)（页面）、[Views/Componets/](<Easy Swift/Views/Componets>)（共用小件）、[Services/](<Easy Swift/Services>)（网络与解析）、[Models/](<Easy Swift/Models>)（SwiftData + Codable）、[Utils/](<Easy Swift/Utils>)（平台差异、日志、分享）。
 - 依赖：**SwiftUtils（exactVersion 0.0.28）+ swift-log**。0.0.26 起已剥离 Alamofire，工程不再依赖它；`HttpUtil` 是纯 Foundation 实现，`setHeader` 收 `[String: String]`，回调固定在主队列。0.0.27 起 `KeychainUtil` 改用数据保护钥匙串（见 §3.2）。0.0.28 补齐 `PermissionUtil`（权限状态分档 + 能力探测 + Info.plist 键检查），`CameraUtil().checkCameraPermissions(...)` 已改为它的封装，签名不变。

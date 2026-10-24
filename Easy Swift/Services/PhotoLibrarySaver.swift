@@ -196,17 +196,9 @@ enum LivePhotoPair {
         item.value = identifier as NSString
         session.metadata = [item]
 
-        if #available(iOS 18.0, macOS 15.0, *) {
-            // export(to:as:) 自己管输出，不要再碰 outputURL/outputFileType（新 SDK 已废弃）
-            try await session.export(to: output, as: .mov)
-        } else {
-            session.outputURL = output
-            session.outputFileType = .mov
-            await session.export()
-            if session.status != .completed {
-                throw MediaSaveError.livePhotoBuildFailed(session.error?.localizedDescription ?? "导出未完成")
-            }
-        }
+        // 部署目标是 iOS 27 / macOS 27，`export(to:as:)` 恒可用；
+        // 不要再碰 outputURL / outputFileType（新 SDK 已废弃）
+        try await session.export(to: output, as: .mov)
         return output
     }
 
