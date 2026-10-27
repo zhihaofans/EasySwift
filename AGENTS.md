@@ -104,6 +104,7 @@ xcrun simctl io "<设备名>" screenshot /tmp/easy-swift.png
 - `body` 里不做生成、IO、网络：二维码曾经在 `body` 里生成，输入框每敲一个字就跑一遍 CoreImage。放 `.task(id:)` / `@State` + `.onChange`，必要时加防抖。
 - 联动刷新走单一入口，别让两个 `.onChange`/`.onAppear` 写同一份状态。
 - `@State` 且写了自定义 `init` 时：**先初始化存储属性，再 `_x = State(wrappedValue: ...)`**；直接 `self.x = ...` 会报 `variable 'self.y' used before being initialized`。
+- **`.sheet` 弹出的页面必须自己套一层 `NavigationStack`**：sheet 里没有导航容器，`setNavigationTitle` 和 `.toolbar` 会**静默不渲染**——标题和工具栏按钮直接消失，内容还会顶到状态栏下面。这个坑在扫码登录、Cookie 编辑、网页登录三处都踩过（2026-10-27）。
 
 ### 3.7 平台差异收口
 

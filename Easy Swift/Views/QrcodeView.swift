@@ -16,6 +16,11 @@ struct QrcodeView: View {
     @State private var alertTitle: String="未知错误"
     @State private var alertText: String="未知错误"
     @State private var qrcodeContent: String=""
+
+    /// 收件箱分派进来的文本（例如一段纯文本要编成二维码）
+    init(initialText: String = "") {
+        _qrcodeContent=State(initialValue: initialText)
+    }
     @State private var isShowingScanner=false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isDecoding=false

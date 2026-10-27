@@ -9,6 +9,9 @@ import SwiftUI
 import SwiftUtils
 
 struct MainView: View {
+    /// 收件箱角标：未处理条数
+    @ObservedObject private var inbox=InboxStore.shared
+
     var body: some View {
         #if os(iOS)
         NavigationStack {
@@ -45,6 +48,12 @@ struct MainView: View {
     @ViewBuilder
     private func mainList() -> some View {
         List {
+            NavigationLink {
+                InboxView()
+            } label: {
+                Label("收件箱", systemImage: "tray")
+            }
+            .badge(inbox.unhandledCount)
             NavigationLink("二维码", destination: QrcodeView())
             NavigationLink("链接解析", destination: LinkParserView())
             NavigationLink("剪贴板", destination: ClipboardView())

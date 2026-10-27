@@ -296,3 +296,35 @@
 - [ ] 缺 token：拿一条**去掉 `xsec_token`** 的 explore 链接，确认文案说的是"缺 token"而不是"已删除"
 - [ ] `undefined` 收窄：构造一条正文里含 "undefined" 的 HTML 片段做纯函数断言（仓库外 harness）
 - [ ] 作者主页 / 搜索：真实主页链接与关键词各跑一次，贴出拿到几条、前三条标题
+
+---
+
+## 七、收件箱（外部内容入口）
+
+> 目标：别的 App 分享文本/链接进来，自动识别类型并分派到对应功能页。
+
+- [x] **B 段：主 App 内闭环**（2026-10-28 完成）
+      - [InboxClassifier.swift](<Easy Swift/Services/InboxClassifier.swift>)：纯逻辑分类 + 分派建议
+        （小红书/抖音链接 → 链接解析；其它 http(s) → 链接解析；短文本 → 搜索；长文本/多行 → 二维码），
+        附件 `LinkExtractor` 从整段分享文案里抠第一个链接
+      - [InboxStore.swift](<Easy Swift/Services/InboxStore.swift>)：JSON 存储（不用 SwiftData，理由见文件头），
+        10 秒内同一条去重、上限 200 条、原子写入、坏文件改名留证
+      - [InboxView.swift](<Easy Swift/Views/InboxView.swift>)：列表 + 未处理角标 + 左右滑（删除/标记）+
+        「从剪贴板收件」+ 全标/清空；点条目跳到目标页并**把文本填好**
+        （三个页面加了 `initialLink` / `initialText` / `initialKeyword`）
+      - URL scheme：`easyswift://inbox?text=<percent-encoded>`，`CFBundleURLTypes` 写在
+        [Easy-Swift-Info.plist](Easy-Swift-Info.plist)（这个键没有对应的 `INFOPLIST_KEY_*` 构建设置）
+      - 版本 0.3.0 (6)
+- [x] **验证**
+      - 仓库外 harness 41 条断言全过：分类（含"链接夹在分享文案里"、中文标点剥离、`%XX` 不解码、
+        多行走二维码）、URL 往返、JSON 落盘/重读/去重/清空
+      - macOS 端到端：`open "easyswift://inbox?text=…"` → `已收录` → 杀掉重开 → `读取 2 条`（真持久化）
+      - iOS 模拟器：收件箱入口渲染正常；URL 投递被系统确认框「在 "Easy Swift" 中打开?」挡住
+        （这是 iOS 对自定义 scheme 的预期行为，simulator 里没有点击能力）
+- [ ] **A 段：Share Extension**（分享面板出现「Easy Swift」）
+      - 需要新增 extension target + **App Groups entitlement**（`group.me.zzhhoo.easyswift`）
+      - ⚠️ 实测：macOS 上没有 App Group entitlement 时 `containerURL(forSecurityApplicationGroupIdentifier:)`
+        **照样返回路径**，写进去报"没有权限保存到文件夹" —— 表现是内存有、磁盘无、重启就丢。
+        现在 [InboxStore](<Easy Swift/Services/InboxStore.swift>) 用"写探针"判断，写不进去自动退回 AppSupport
+      - 所以做 A 之前必须先确认开发者账号能给这个 App ID 启用 App Groups；iOS/macOS 两个 entitlements 都要加
+      - 扩展只需要做一件事：把 `NSExtensionContext` 里的文本/链接写进同一个 `inbox.json`（格式已定，`InboxItem` 是 Codable）

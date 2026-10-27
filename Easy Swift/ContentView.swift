@@ -34,6 +34,14 @@ struct ContentView: View {
             } message: {
                 Text(crashReport?.details ?? "")
             }
+            .onOpenURL { url in
+                // 其他 App / 快捷指令 / 浏览器把文本丢进来：easyswift://inbox?text=…
+                guard let text=InboxStore.inboxText(from: url) else {
+                    debugPrint("[收件箱] 不认识的 URL: \(url.absoluteString.prefix(80))")
+                    return
+                }
+                InboxStore.shared.add(text, source: .urlScheme)
+            }
     }
 }
 

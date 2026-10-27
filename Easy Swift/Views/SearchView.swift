@@ -20,6 +20,11 @@ struct SearchView: View {
     @State private var selectedType: SearchType = .github
     @State private var isShareSheetPresented = false
     @State private var SearchKey = "test"
+
+    /// 收件箱分派进来的关键词
+    init(initialKeyword: String = "") {
+        _SearchKey=State(initialValue: initialKeyword)
+    }
     @State private var isShowingSafari = false
     @State private var safariUrlString: String = "https://www.apple.com"
     #if os(macOS)

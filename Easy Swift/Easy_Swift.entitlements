@@ -14,5 +14,11 @@
 	<array>
 		<string>$(AppIdentifierPrefix)me.zzhhoo.easyswift</string>
 	</array>
+	<!-- 收件箱与分享扩展（A 段）共用的 App Group。
+	     已在开发者后台注册 group.me.zzhhoo.easyswift，并在 App ID 上启用 App Groups。 -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.me.zzhhoo.easyswift</string>
+	</array>
 </dict>
 </plist>

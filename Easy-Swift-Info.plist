@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict/>
+<dict>
+	<!-- 收件箱的对外入口：easyswift://inbox?text=<percent-encoded>
+	     其他 App、快捷指令、浏览器书签都能用它把文本丢进 Easy Swift。
+	     注意：CFBundleURLTypes 没有对应的 INFOPLIST_KEY_* 构建设置，只能写在这份 plist 里。 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>me.zzhhoo.easyswift</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>easyswift</string>
+			</array>
+		</dict>
+	</array>
+</dict>
 </plist>

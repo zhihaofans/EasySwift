@@ -18,6 +18,11 @@ import CoreServices
 
 struct LinkParserView: View {
     @State private var linkInput=""
+
+    /// 收件箱分派进来的链接（已经抠好的那条，不是整段分享文案）
+    init(initialLink: String = "") {
+        _linkInput=State(initialValue: initialLink)
+    }
     /// 输入框焦点：点解析/回车时主动收起键盘
     @FocusState private var inputFocused: Bool
     @State private var isParsing=false
