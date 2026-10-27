@@ -321,7 +321,25 @@
       - macOS 端到端：`open "easyswift://inbox?text=…"` → `已收录` → 杀掉重开 → `读取 2 条`（真持久化）
       - iOS 模拟器：收件箱入口渲染正常；URL 投递被系统确认框「在 "Easy Swift" 中打开?」挡住
         （这是 iOS 对自定义 scheme 的预期行为，simulator 里没有点击能力）
-- [ ] **A 段：Share Extension**（分享面板出现「Easy Swift」）
+- [x] **A 段：Share Extension**（2026-10-28 完成，真机验证）
+      - 新增 target `ShareExtension`（bundle id `me.zzhhoo.easyswift.ShareExtension`），
+        [ShareViewController.swift](ShareExtension/ShareViewController.swift) 极简实现：进入即收、1.5 秒自动关
+      - 激活规则只收 text / webURL / webPage（`NSExtensionActivationRule`），不抢图片视频
+      - 与主 App 共用 [InboxShared.swift](<Easy Swift/Services/InboxShared.swift>) 的文件层与
+        [InboxClassifier.swift](<Easy Swift/Services/InboxClassifier.swift>) 的分类规则 —— 格式与判定只能有一份
+      - 扩展 entitlements 带 `com.apple.security.application-groups`；分享面板显示名从 `ShareExtension`
+        改成 **Easy Swift**（`INFOPLIST_KEY_CFBundleDisplayName`）
+      - 真机验证：分享一次 → 主 App 日志 `[收件箱] 读取 2 条` → `读取 3 条`（App Group 写读打通）
+      - 签名坑：扩展是新 App ID，`xcodebuild -allowProvisioningUpdates` 拿不到 GUI 账号（`No Accounts`），
+        先在 Xcode GUI 构建一次生成 profile，之后命令行就能复用
+- [ ] **分享扩展无法拉起主 App**（已知限制，后续找解决方法）
+      - 实测（iOS 27.2 / 2026-10-28）：`extensionContext.open(_:)` 回调 false；
+        responder 链上调 `openURL:` 能执行但被系统忽略，面板关闭后只回到发起分享的 App
+      - 微信那种"跳回去"不是扩展做的，是**面板关闭后系统自动回原 App**；扩展主动开别的 App 没有官方 API
+      - 现状：面板只显示「已收进收件箱（类型）」+「完成」，按钮已去掉（留着只会让人以为坏了）
+      - 待探索方向：① 扩展写入后由 App 发本地通知、点通知进 App（需通知权限）；② Action Extension / 快捷指令；
+        ③ 等 Apple 提供新 API。**先记着，别再加一个点了没反应的按钮**
+
       - 需要新增 extension target + **App Groups entitlement**（`group.me.zzhhoo.easyswift`）
       - ⚠️ 实测：macOS 上没有 App Group entitlement 时 `containerURL(forSecurityApplicationGroupIdentifier:)`
         **照样返回路径**，写进去报"没有权限保存到文件夹" —— 表现是内存有、磁盘无、重启就丢。

@@ -7,15 +7,64 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA00C1A10000000000000003 /* InboxShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00C1A10000000000000001 /* InboxShared.swift */; };
+		AA00C1A10000000000000004 /* InboxClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00C1A10000000000000002 /* InboxClassifier.swift */; };
+		2666A3DC309109F400442889 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2666A3D2309109F400442889 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		267CD6512CF36C6200126C7D /* SwiftUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 267CD6502CF36C6200126C7D /* SwiftUtils */; };
 		AA00C1A00000000000000002 /* CrashKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA00C1A00000000000000001 /* CrashKit */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		2666A3DA309109F400442889 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 267CD6352CF36BCC00126C7D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2666A3D1309109F400442889;
+			remoteInfo = ShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2666A3E1309109F400442889 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2666A3DC309109F400442889 /* ShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		AA00C1A10000000000000001 /* InboxShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InboxShared.swift; path = "Easy Swift/Services/InboxShared.swift"; sourceTree = SOURCE_ROOT; };
+		AA00C1A10000000000000002 /* InboxClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InboxClassifier.swift; path = "Easy Swift/Services/InboxClassifier.swift"; sourceTree = SOURCE_ROOT; };
+		2666A3D2309109F400442889 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		267CD63D2CF36BCC00126C7D /* Easy Swift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Easy Swift.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2666A3DD309109F400442889 /* Exceptions for "ShareExtension" folder in "ShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				ShareExtension.entitlements,
+			);
+			target = 2666A3D1309109F400442889 /* ShareExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		2666A3D3309109F400442889 /* ShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2666A3DD309109F400442889 /* Exceptions for "ShareExtension" folder in "ShareExtension" target */,
+			);
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
 		267CD63F2CF36BCC00126C7D /* Easy Swift */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Easy Swift";
@@ -24,6 +73,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2666A3CF309109F400442889 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		267CD63A2CF36BCC00126C7D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -40,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				267CD63F2CF36BCC00126C7D /* Easy Swift */,
+				2666A3D3309109F400442889 /* ShareExtension */,
 				267CD63E2CF36BCC00126C7D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -48,6 +105,7 @@
 			isa = PBXGroup;
 			children = (
 				267CD63D2CF36BCC00126C7D /* Easy Swift.app */,
+				2666A3D2309109F400442889 /* ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -55,6 +113,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2666A3D1309109F400442889 /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2666A3DE309109F400442889 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				2666A3CE309109F400442889 /* Sources */,
+				2666A3CF309109F400442889 /* Frameworks */,
+				2666A3D0309109F400442889 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2666A3D3309109F400442889 /* ShareExtension */,
+			);
+			name = ShareExtension;
+			packageProductDependencies = (
+			);
+			productName = ShareExtension;
+			productReference = 2666A3D2309109F400442889 /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		267CD63C2CF36BCC00126C7D /* Easy Swift */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 267CD64C2CF36BCD00126C7D /* Build configuration list for PBXNativeTarget "Easy Swift" */;
@@ -62,10 +142,12 @@
 				267CD6392CF36BCC00126C7D /* Sources */,
 				267CD63A2CF36BCC00126C7D /* Frameworks */,
 				267CD63B2CF36BCC00126C7D /* Resources */,
+				2666A3E1309109F400442889 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				2666A3DB309109F400442889 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				267CD63F2CF36BCC00126C7D /* Easy Swift */,
@@ -86,9 +168,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1600;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					2666A3D1309109F400442889 = {
+						CreatedOnToolsVersion = 27.0;
+					};
 					267CD63C2CF36BCC00126C7D = {
 						CreatedOnToolsVersion = 16.0;
 						SystemCapabilities = {
@@ -119,11 +204,19 @@
 			projectRoot = "";
 			targets = (
 				267CD63C2CF36BCC00126C7D /* Easy Swift */,
+				2666A3D1309109F400442889 /* ShareExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		2666A3D0309109F400442889 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		267CD63B2CF36BCC00126C7D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -134,6 +227,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2666A3CE309109F400442889 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00C1A10000000000000003 /* InboxShared.swift in Sources */,
+				AA00C1A10000000000000004 /* InboxClassifier.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		267CD6392CF36BCC00126C7D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -143,7 +245,80 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		2666A3DB309109F400442889 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2666A3D1309109F400442889 /* ShareExtension */;
+			targetProxy = 2666A3DA309109F400442889 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		2666A3DF309109F400442889 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 7;
+				DEVELOPMENT_TEAM = 9DU6DRLH3R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Easy Swift";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		2666A3E0309109F400442889 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 7;
+				DEVELOPMENT_TEAM = 9DU6DRLH3R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Easy Swift";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		267CD64A2CF36BCD00126C7D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -272,7 +447,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Easy Swift/Easy_Swift.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Easy Swift/Preview Content\"";
 				DEVELOPMENT_TEAM = 9DU6DRLH3R;
@@ -299,7 +474,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -320,7 +495,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Easy Swift/Easy_Swift.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Easy Swift/Preview Content\"";
 				DEVELOPMENT_TEAM = 9DU6DRLH3R;
@@ -347,7 +522,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -363,6 +538,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2666A3DE309109F400442889 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2666A3DF309109F400442889 /* Debug */,
+				2666A3E0309109F400442889 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		267CD6382CF36BCC00126C7D /* Build configuration list for PBXProject "Easy Swift" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

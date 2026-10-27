@@ -36,8 +36,13 @@ struct ContentView: View {
             }
             .onOpenURL { url in
                 // 其他 App / 快捷指令 / 浏览器把文本丢进来：easyswift://inbox?text=…
-                guard let text=InboxStore.inboxText(from: url) else {
+                guard InboxStore.isInboxURL(url) else {
                     debugPrint("[收件箱] 不认识的 URL: \(url.absoluteString.prefix(80))")
+                    return
+                }
+                // 扩展里的「打开 Easy Swift」只带 scheme+host，不带 text：那就只是把 App 拉到前台
+                guard let text=InboxStore.inboxText(from: url) else {
+                    debugPrint("[收件箱] 收件箱链接没带 text，仅打开 App")
                     return
                 }
                 InboxStore.shared.add(text, source: .urlScheme)

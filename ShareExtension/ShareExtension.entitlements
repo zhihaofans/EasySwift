@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 与主 App 共用收件箱文件（inbox.json）。
+	     这个 group 必须与以下三处完全一致：
+	     1) 开发者后台注册的 App Group
+	     2) 主 App entitlements
+	     3) InboxShared.appGroupID
+	     注意：iOS 扩展只能申请 application-groups，没有 keychain-access-groups ——
+	     扩展不需要碰钥匙串，登录态由主 App 管。 -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.me.zzhhoo.easyswift</string>
+	</array>
+</dict>
+</plist>

@@ -116,6 +116,11 @@ final class InboxStore: ObservableObject {
     static let urlScheme="easyswift"
     static let inboxHost="inbox"
 
+    /// 是不是收件箱链接（允许不带 text：扩展里的「打开 Easy Swift」只开 App，不再收东西）
+    static func isInboxURL(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == urlScheme && (url.host ?? "").lowercased() == inboxHost
+    }
+
     /// `easyswift://inbox?text=…` → 文本；不是收件箱链接返回 nil
     static func inboxText(from url: URL) -> String? {
         guard url.scheme?.lowercased() == urlScheme else { return nil }
