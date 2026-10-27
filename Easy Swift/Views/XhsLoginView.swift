@@ -24,6 +24,14 @@ struct XhsLoginView: View {
     @State private var isLoading=true
 
     var body: some View {
+        // 同样是为了让标题渲染出来（sheet 里没有导航容器）
+        NavigationStack {
+            content
+                .setNavigationTitle("登录小红书")
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 10) {
             HStack(spacing: 8) {
                 if isChecking || isLoading {
@@ -53,7 +61,6 @@ struct XhsLoginView: View {
             }
             .padding()
         }
-        .setNavigationTitle("登录小红书")
     }
 
     // MARK: - 自动检测

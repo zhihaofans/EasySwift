@@ -20,10 +20,36 @@ struct XhsCookieEditView: View {
     @State private var isChecking=false
     @State private var message: String="粘贴后点「验证并保存」"
     @State private var isError=false
+    /// 是否已经把钥匙串里现有的 cookie 读进输入框（只读一次，之后用户改了就不覆盖）
+    @State private var didPrefill=false
 
     var body: some View {
+        // sheet 里没有导航容器：不套这一层，标题和「复制」都渲染不出来，
+        // 内容还会顶到状态栏下面（实测截图里文字被裁掉一截）
+        NavigationStack {
+            content
+                .setNavigationTitle("小红书 Cookie")
+                .toolbar {
+                    ToolbarItem(placement: copyButtonPlacement) {
+                        Button {
+                            ClipboardUtil().setString(text)
+                            message="已复制当前输入框里的 cookie"
+                            isError=false
+                        } label: {
+                            Label("复制", systemImage: "doc.on.doc")
+                        }
+                        .disabled(text.isEmpty)
+                    }
+                }
+        }
+        .task {
+            await prefillFromKeychain()
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("从浏览器开发者工具 → Application → Cookies → xiaohongshu.com 复制，\n粘贴成 `name=value; name=value` 的形式，至少要包含 web_session。")
+            Text("从浏览器开发者工具 → Application → Cookies → xiaohongshu.com 复制，\n粘贴成 `name=value; name=value` 的形式，至少要包含 web_session。\n（打开时会把当前保存的那份读进来，方便直接复制走）")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
@@ -60,7 +86,30 @@ struct XhsCookieEditView: View {
             }
             .padding()
         }
-        .setNavigationTitle("小红书 Cookie")
+    }
+
+    private var copyButtonPlacement: ToolbarItemPlacement {
+        #if os(iOS)
+        return .navigationBarTrailing
+        #else
+        return .automatic
+        #endif
+    }
+
+    /// 把钥匙串里现有的 cookie 读进输入框：用户往往只是想「看一眼/复制走」，
+    /// 每次都去浏览器重新复制一遍很折腾。只填一次，不覆盖用户已经输入的内容。
+    @MainActor
+    private func prefillFromKeychain() async {
+        guard !didPrefill else { return }
+        didPrefill=true
+        guard text.isEmpty else { return }
+        guard let stored=await XiaohongshuSession.shared.cookieHeader(), !stored.isEmpty else { return }
+        text=stored
+        // 只打对数，不打内容：这是凭据
+        let pairs=stored.split(separator: ";").count
+        debugPrint("[小红书Cookie] 已把钥匙串里的 cookie 预填进输入框，\(pairs) 对")
+        message="下面是当前已保存的 cookie，点右上角「复制」可以取走"
+        isError=false
     }
 
     @MainActor
