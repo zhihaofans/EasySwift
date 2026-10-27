@@ -21,6 +21,8 @@ struct SettingView: View {
     @State private var alertText: String = "未知错误"
     // 小红书登录态
     @State private var showingXhsLogin = false
+    /// 扫码登录面板（原生二维码）；失败/超时由用户点「改用网页登录」退回 showingXhsLogin
+    @State private var showingXhsQRLogin = false
     @State private var showingXhsCookieEdit = false
     @State private var xhsState: XiaohongshuLoginState = .unknown
     var body: some View {
@@ -54,8 +56,19 @@ struct SettingView: View {
                     }
                     if xhsState != .valid {
                         Button(xhsState == .expired ? "重新登录" : "登录小红书") {
+                            // macOS 上扫码最顺（用手机扫电脑屏幕）；iPhone 上没法扫自己这块屏，
+                            // 所以手机端仍以网页登录（手机号/验证码）为主，扫码放到次要入口
+                            #if os(macOS)
+                            showingXhsQRLogin = true
+                            #else
                             showingXhsLogin = true
+                            #endif
                         }
+                        #if os(iOS)
+                        Button("扫码登录（用另一台设备扫）") {
+                            showingXhsQRLogin = true
+                        }
+                        #endif
                     }
                     Button("手动填写 Cookie") {
                         showingXhsCookieEdit = true
@@ -78,6 +91,14 @@ struct SettingView: View {
         #endif
         .task {
             await refreshXhsLoginState()
+        }
+        .sheet(isPresented: $showingXhsQRLogin) {
+            XhsQRLoginView(onFinished: {
+                Task { await refreshXhsLoginState() }
+            }, onFallback: {
+                // 二维码这条路走不通（页面改版/风控/用户扫不上）就退回可见网页登录
+                showingXhsLogin = true
+            })
         }
         .sheet(isPresented: $showingXhsLogin) {
             XhsLoginView(onFinished: {

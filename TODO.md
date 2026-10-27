@@ -4,7 +4,7 @@
 >
 > 用法：做完就把 `[ ]` 改 `[x]`；新增条目要写清「改哪里 + 怎么算做完」。**不要**在这里记录本机绝对路径、账号、Token。
 
-最后更新：2026-10-23
+最后更新：2026-10-27
 
 ---
 
@@ -190,3 +190,109 @@
 - [x] GitHub 起始日期改 UTC 计算，`DateFormatter` 补 `locale` / `timeZone`
 - [x] 搜索关键词改用 `EncodeUtil().urlEncode`（`.urlQueryAllowed` 含 `&=?+`）
 - [x] 新增 [AGENTS.md](AGENTS.md)、[TODO.md](TODO.md)
+
+---
+
+## 六、小红书解析（参考 2026-10-26 的三份资料）
+
+> 资料来源：`xhs-parser-src-20261026.tar.gz`（Node 插件 + Python 签名脚本）、`dsh-xhs-plugin-0.2.0.tgz`（同源打包）、
+> 《小红书搜索抓取复现指南（含 API 登录搜索附章）》。它们是 Node/Python 实现，**不能直接搬进 App**，
+> 但里面的实测结论可以直接用来改 [`XiaohongshuParser.swift`](<Easy Swift/Services/LinkParser/XiaohongshuParser.swift>)。
+> 对照结论：我们已有的能力（`__INITIAL_STATE__` 解析、explore/discovery 双形态、去水印、h265→h264→av1→h266、
+> 原图 HEAD 探测、`/notification` 登录探测）与参考实现基本对齐，下面是**确实缺的**。
+
+### 6.1 正确性（差异明确，先做这三件）
+
+- [ ] **图片直链默认是 HEIC**：`sns-img-bd.xhscdn.com/<fileId>` 默认返回 `ftypheic`，参考实现要在后面加
+      `?imageView2/format/jpg` 才拿到原尺寸 JPEG（约 250KB/张），或加 `imageView2/2/w/<宽>/format/jpg` 取指定宽。
+      - 现状：`dewatermarkURL` 直接把 `imageCDN + fileId` 当结果，`MediaDownloader` 按魔数会存成 `.heic`
+      - 影响：相册能存 HEIC，但预览/分享/转给别人兼容性差；Live Photo 的静态图会被我们重编码成 JPEG（这条没事）
+      - 待确认：先拿真实笔记的直链 `HEAD` 看 `Content-Type`、再读前 16 字节确认 `ftypheic`，确认后再改
+      - 改法：`dewatermarkURL` 输出统一带 JPEG 参数；回退到平台 webpic 域名时**不要**加（那是另一种 CDN）
+- [ ] **`undefined` → `null` 的替换太粗暴**：现在对整个 `__INITIAL_STATE__` 字符串做全局替换，
+      正文里出现 "undefined" 字样会被改坏；参考实现只替换**值位置**的（正则 `([:[,]undefined(?=[,}\]])`）
+- [ ] **显式 `null` 会变成字符串 "null"**：参考实现的 `str()` 会过滤掉 `"null"`；我们的 title / 描述字段可能真的拿到 `"null"`
+
+### 6.2 文案与错误码
+
+- [ ] **缺 `xsec_token` 的文案不准**：裸 `/explore/<id>` 必 404（`error 300031`），但 HTTP 是 200、页面里还有
+      `__INITIAL_STATE__` —— 很容易被误判成"笔记已删"。我们虽然识别了 `300031`，文案却说"分享链接已过期"，
+      应该明确成「链接缺少 xsec_token，请从小红书 App 重新复制分享链接」
+- [ ] **对齐参考实现的错误码分类**：`BAD_LINK` / `LOGIN_REQUIRED` / `NOT_FOUND` / `NO_STATE` / `BLOCKED` / `NETWORK`
+      ↔ 我们的 `LinkParseError`（已有 7 类，够用，主要补文案与判据：NO_STATE 应提示"限流或改版"而不是"被风控"）
+- [ ] **`note.time` 是毫秒**：要用（历史记录、展示时间）时记得 `/1000`，别直接当秒
+
+### 6.3 Cookie / 登录态
+
+- [ ] **`web_session` 前缀能区分真假登录**：`04…` 是真登录，`03…` 是设备级游客态（能解析单条、能看公开页，
+      但搜索接口一律 `-104`）。现在只有"有/无 cookie"三态，可以在设置页把游客态单独标出来
+- [ ] 参考指南里"用 `/explore` 是否 302 到 `/login` 判登录"这条**我们已经更稳**（改成了 `/notification`，
+      因为游客态访问 `/explore` 也返回 200），保持现状，别回退
+
+### 6.4 新功能（要不要做需要拍板，见 §四）
+
+- [ ] **作者主页解析**：SSR 里 `user.userPageData.userInfo`（nickname / fans / follows / likeAndCollect），
+      笔记列表在 `user.notes._value[0]`（**Vue 3 ref，要先解包**），每条自带 `xsecToken`；
+      注意主页 DOM 上的卡片链接**不带 token**，直接用会 404
+- [ ] **关键词搜索**：`/search_result?keyword=<urlencode>&type=51&page=N`，从 HTML 抠
+      `href="(/search_result/…xsec_token=…)"` 再把 `/search_result/` 换成 `/explore/`。
+      纯 HTTP 能不能拿到结果要实测（参考实现的搜索走 API + 签名，另有 Playwright 兜底方案）
+- [ ] **批量解析**：解析页已经支持"全部保存"，可以再往上做"一次粘多条链接 → 逐个解析"
+
+### 6.5 扫码登录（原生二维码）—— 已实现，走「隐藏 WebView 抠图」路线
+
+- [x] **为什么不调登录接口**：`create` / `qr/userinfo` / `qr/status` 三个接口全都要 `x-s` / `x-s-common` / `x-t`，
+      算法在第三方 Python 库（xhshow）里，Swift 复刻成本高、平台一改就废。实测无签名请求 →
+      `HTTP 406 {"code":-1,"success":false}`（带不带假 a1 都一样）
+- [x] **实现**：[XhsQRLoginService.swift](<Easy Swift/Services/LinkParser/XhsQRLoginService.swift>)（269 行）+
+      [XhsQRLoginView.swift](<Easy Swift/Views/XhsQRLoginView.swift>)（165 行）
+      - 隐藏 WKWebView（`.nonPersistent()` + 桌面 UA + 0.01 透明度）打开 `/login`，
+        页面自己的 JS 去调签名接口并渲染二维码；我们只做三件事：抠图、轮询状态、轮询 cookie
+      - 抠图：`img.qrcode-img` 的 `src` 就是 `data:image/png;base64,…`（spike 实测 128×128，
+        解出来的内容正是 `https://www.xiaohongshu.com/mobile/login?qrId=…&xhs_code=…`）
+      - 登录判据：cookie 里出现 `web_session` **且前缀 04**（03 是游客态）→ 再走一次行为探测才落库
+      - 超时 180 秒；「刷新二维码」重新加载页面；「改用网页登录」回退到原来的可见 WebView 流程
+- [x] **踩到并修掉的两个坑**
+      - `loadCookies()` 一开始用了 `WKWebsiteDataStore.default()`，而隐藏 WebView 用的是 `.nonPersistent()`，
+        两者不是同一个存储 —— 页面登录成功了这里也永远是空的。改成读 `webView.configuration.websiteDataStore`
+      - 在 sheet 里直接 `.setNavigationTitle` / `.toolbar` 不生效（没有导航容器），标题和「取消」都不显示；
+        自己套一层 `NavigationStack`
+      - 小插曲：`private var x=-1` 被 Swift 当成自定义运算符 `=-` 解析，必须写 `= -1`
+- [x] **平台入口按能力区分**：macOS 扫码为主（手机扫电脑屏幕最顺）；iOS 主入口仍是网页登录
+      （手机号/验证码），扫码放在「扫码登录（用另一台设备扫）」——因为 iPhone 没法扫自己的屏幕
+- [x] **模拟器实测**（2026-10-27）
+      - `[小红书扫码] 拿到二维码，长度=4454，解出来的图=ok`
+      - `[小红书扫码] 当前 cookie 数=8 小红书域=["a1","ets","webId","xsecappid",…]` → 12 → 13
+      - `[小红书扫码] 出现 web_session，前缀=03（04=真登录，03=游客态）` → 正确忽略，没有误判成登录
+- [x] **真实扫码闭环（2026-10-27 真机通过）**：iPhone 15 Pro / 0.2.2，40 秒内完成
+      ```
+      [小红书扫码] 当前 cookie 数=16 小红书域=["a1","ets","gid","id_token",…,"web_session"]
+      [小红书扫码] 出现 web_session，前缀=04（04=真登录，03=游客态）
+      [小红书扫码] 拿到 web_session（04 开头），开始行为探测
+      [小红书] 登录态探测: status=200 final=…/notification 登录墙=false
+      keychain.update: 更新数据保护钥匙串成功, id: xhs_web_session_cookies
+      [小红书扫码] 登录成功
+      ```
+      - 登录后多了 `id_token`（JWT 形态的凭据）。**已加进 `isRelevant` 白名单**并在第二次真机扫码时验证落库：
+      ```
+      [小红书] 保存 cookie: ["a1", "gid", "id_token", "webId", "web_session", "xsecappid"]
+      keychain.save: 写入数据保护钥匙串成功
+      [小红书扫码] 登录成功
+      ```
+      - 这一轮还顺带验了「退出登录 → 重新扫码」：`keychain.remove` 成功 → 新建 WebView 拿到游客 cookie（8 条）
+        → 扫码后 16 条 → 只保存白名单里的 6 条。整个循环 19 秒
+      - 日志只打 cookie 名字、不打值（这几个都是凭据）
+- [ ] 可选改进：二维码被页面判定过期时主动换一张（现在只在用户点「刷新二维码」或超时后提示）
+
+### 6.6 不打算做 / 需要决策
+
+- [ ] **API 路线（x-s / x-t 签名）**：参考实现靠 Python 的 `xhshow` + 签名脚本，App 内嵌不了；
+      要在 Swift 里复刻签名算法是个大工程。**建议不碰**：只解析分享链接，不做搜索 API
+- [ ] 参考实现的"下载到目录 + `meta.json`"是桌面场景，App 里对应的是"保存到相册"，不需要照搬
+
+### 6.7 验证方式（这次别只看编译）
+
+- [ ] HEIC：真实笔记直链 `HEAD` + 读文件头，确认改前是 `ftypheic`、改后是 JPEG
+- [ ] 缺 token：拿一条**去掉 `xsec_token`** 的 explore 链接，确认文案说的是"缺 token"而不是"已删除"
+- [ ] `undefined` 收窄：构造一条正文里含 "undefined" 的 HTML 片段做纯函数断言（仓库外 harness）
+- [ ] 作者主页 / 搜索：真实主页链接与关键词各跑一次，贴出拿到几条、前三条标题

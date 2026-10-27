@@ -74,6 +74,8 @@ actor XiaohongshuSession {
     func save(cookies: [HTTPCookie]) -> Bool {
         let kept = cookies.filter { Self.isRelevant($0) }
         guard !kept.isEmpty, let header = Self.header(from: kept) else { return false }
+        // 只打名字不打值：这几个都是凭据。名字列表能回答"到底存进去了哪几条"
+        debugPrint("[小红书] 保存 cookie: \(kept.map(\.name).sorted())")
         return save(header: header)
     }
 
@@ -180,7 +182,9 @@ actor XiaohongshuSession {
     static func isRelevant(_ cookie: HTTPCookie) -> Bool {
         guard cookie.domain.contains("xiaohongshu.com") else { return false }
         let name = cookie.name.lowercased()
-        return ["web_session", "a1", "webid", "gid", "xsecappid", "customerclientid"].contains(name)
+        // id_token：扫码登录后才出现（JWT 形态），做搜索/API 那条线要用到。
+        // 它是凭据，所以和 web_session 一样只进钥匙串，不进日志、不进 UserDefaults。
+        return ["web_session", "a1", "webid", "gid", "xsecappid", "customerclientid", "id_token"].contains(name)
     }
 
     /// 拼成 Cookie 请求头

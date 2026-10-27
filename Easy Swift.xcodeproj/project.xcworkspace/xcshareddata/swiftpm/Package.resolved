@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/zhihaofans/CrashKit",
       "state" : {
-        "revision" : "067310e0610bb65ea757316f1b88e6ded99df017",
-        "version" : "0.1.0"
+        "revision" : "58877945489209c9cb625519876055f0ff355acd",
+        "version" : "0.1.2"
       }
     },
     {
