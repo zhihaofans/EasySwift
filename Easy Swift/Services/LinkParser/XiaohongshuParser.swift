@@ -48,6 +48,12 @@ struct XiaohongshuParser: LinkParser {
             response = try await fetch(pageURL, ua: VideoHTTP.UA.desktopChrome)
         }
         if Self.isLoginWall(response) {
+            // `/website-login/error` + `error_code=300011` 是**安全限制**（分享链接缺 xsec_token
+            // 时就会这样），不是登录过期 —— 错报"登录已过期"会让人白白重新扫码
+            if Self.isSecurityBlock(response) {
+                debugPrint("[小红书] 命中安全限制（缺 token），finalURL=\(response.url.absoluteString)")
+                throw LinkParseError.unknown("这条笔记的分享链接不完整（缺少访问参数），请重新复制分享链接")
+            }
             // 原本判定为"已登录"却撞墙 → 升级成"过期"，界面上要区分这两种情况
             await XiaohongshuSession.shared.noteLoginWall()
             throw LinkParseError.needLogin
@@ -131,6 +137,13 @@ struct XiaohongshuParser: LinkParser {
     static func isLoginWall(_ response: VideoHTTP.Response) -> Bool {
         let path = response.url.path.lowercased()
         return path.contains("/login") || path.contains("website-login") || path.contains("captcha")
+    }
+
+    /// 安全限制页：`/website-login/error` 且带 `error_code=300011`（缺 xsec_token 时出现）
+    static func isSecurityBlock(_ response: VideoHTTP.Response) -> Bool {
+        if response.url.path.lowercased().contains("website-login/error") { return true }
+        if response.url.query?.contains("error_code=300011") == true { return true }
+        return response.body.contains("300011")
     }
 
     /// 作品不可见：风控 404 页（200 状态 + 跳 /404），或页面带 300031

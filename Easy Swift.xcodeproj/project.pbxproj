@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AA00C1A10000000000000003 /* InboxShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00C1A10000000000000001 /* InboxShared.swift */; };
-		AA00C1A10000000000000004 /* InboxClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00C1A10000000000000002 /* InboxClassifier.swift */; };
-		2666A3DC309109F400442889 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2666A3D2309109F400442889 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2666A3DC309109F400442889 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2666A3D2309109F400442889 /* ShareExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		267CD6512CF36C6200126C7D /* SwiftUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 267CD6502CF36C6200126C7D /* SwiftUtils */; };
 		AA00C1A00000000000000002 /* CrashKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA00C1A00000000000000001 /* CrashKit */; };
+		AA00C1A10000000000000003 /* InboxShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00C1A10000000000000001 /* InboxShared.swift */; };
+		AA00C1A10000000000000004 /* InboxClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00C1A10000000000000002 /* InboxClassifier.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,10 +39,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		AA00C1A10000000000000001 /* InboxShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InboxShared.swift; path = "Easy Swift/Services/InboxShared.swift"; sourceTree = SOURCE_ROOT; };
-		AA00C1A10000000000000002 /* InboxClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InboxClassifier.swift; path = "Easy Swift/Services/InboxClassifier.swift"; sourceTree = SOURCE_ROOT; };
 		2666A3D2309109F400442889 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		267CD63D2CF36BCC00126C7D /* Easy Swift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Easy Swift.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA00C1A10000000000000001 /* InboxShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InboxShared.swift; path = "Easy Swift/Services/InboxShared.swift"; sourceTree = SOURCE_ROOT; };
+		AA00C1A10000000000000002 /* InboxClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InboxClassifier.swift; path = "Easy Swift/Services/InboxClassifier.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -50,7 +50,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				ShareExtension.entitlements,
 			);
 			target = 2666A3D1309109F400442889 /* ShareExtension */;
 		};
@@ -92,12 +91,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2666A4C1309120F800442889 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				AA00C1A10000000000000001 /* InboxShared.swift */,
+				AA00C1A10000000000000002 /* InboxClassifier.swift */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		267CD6342CF36BCC00126C7D = {
 			isa = PBXGroup;
 			children = (
 				267CD63F2CF36BCC00126C7D /* Easy Swift */,
 				2666A3D3309109F400442889 /* ShareExtension */,
 				267CD63E2CF36BCC00126C7D /* Products */,
+				2666A4C1309120F800442889 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -260,7 +269,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 9DU6DRLH3R;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
@@ -272,7 +281,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -292,7 +301,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 9DU6DRLH3R;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
@@ -304,7 +313,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -447,7 +456,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Easy Swift/Easy_Swift.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Easy Swift/Preview Content\"";
 				DEVELOPMENT_TEAM = 9DU6DRLH3R;
@@ -474,7 +483,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -495,7 +504,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Easy Swift/Easy_Swift.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Easy Swift/Preview Content\"";
 				DEVELOPMENT_TEAM = 9DU6DRLH3R;
@@ -522,7 +531,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = me.zzhhoo.easyswift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
