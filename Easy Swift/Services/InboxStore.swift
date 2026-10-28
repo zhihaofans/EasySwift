@@ -69,6 +69,14 @@ final class InboxStore: ObservableObject {
         return item
     }
 
+    /// 显式设置已处理状态（操作执行完自动标已处理）
+    func markHandled(_ item: InboxItem, _ handled: Bool) {
+        guard let index=items.firstIndex(where: { $0.id == item.id }) else { return }
+        guard items[index].handled != handled else { return }
+        items[index].handled=handled
+        persist()
+    }
+
     func toggleHandled(_ item: InboxItem) {
         guard let index=items.firstIndex(where: { $0.id == item.id }) else { return }
         items[index].handled.toggle()

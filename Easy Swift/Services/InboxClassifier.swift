@@ -5,11 +5,10 @@
 //  收件箱的分类与分派建议。**纯逻辑**：不碰网络、不碰 SwiftData，
 //  仓库外的 harness 能直接编它做断言（这条规则来自 AGENTS §5：能抽纯函数就别靠点 UI 验证）。
 //
-//  分类只看"这段文本最像什么"，不猜用户的意图：
-//  - 认出小红书/抖音域名 → 建议去链接解析（对应平台）
-//  - 其它 http(s) 链接 → 链接解析（解析器不支持时会自己报"暂不支持"）
-//  - 没有任何链接、且短得像关键词 → 搜索
-//  - 其它（长文本/多行）→ 生成二维码（二维码能把整段文本编进去，也最通用）
+//  分类只看"这段文本是什么"，**不替用户决定要做什么** —— 由收件箱面板把可做的操作列出来问。
+//  - 链接：复制 + 二维码；**只有解析器支持的平台（小红书/抖音…）才额外给「解析」**
+//    （支不支持问 LinkParserRegistry.capability(for:)，收件箱不写死域名列表）
+//  - 文本：复制 + 二维码 + 搜索
 //
 
 import Foundation
@@ -57,6 +56,7 @@ enum InboxKind: String, CaseIterable {
     case xiaohongshu
     case douyin
     case link
+    /// 历史版本存过这个值（短文本当关键词用）；新分类不再产生它，但旧数据要能读
     case keyword
     case text
 
@@ -96,68 +96,55 @@ enum InboxSource: String, CaseIterable {
     }
 }
 
-/// 建议送去哪个功能页
-enum InboxRoute: Equatable {
-    case linkParser
-    case search
-    case qrcode
-}
-
-/// 分类 + 分派建议
+/// 分类结果：**只描述内容本身**（类型、链接、原文）。
+///
+/// 「能做什么操作」「面板顶部那句话」放在 App 专属的 InboxActions.swift 里 ——
+/// 那部分要问 LinkParserRegistry（支持哪些平台），而分享扩展不编译链接解析器。
 struct InboxClassification: Equatable {
     let kind: InboxKind
     let link: URL?
-    let route: InboxRoute
-
-    /// 走进这个页面时要带上哪段文本：
-    /// - 链接解析/搜索：优先只带链接或关键词，别把整段分享文案塞进输入框
-    /// - 二维码：带原文（整段文本编进二维码才是本意）
-    var payload: String {
-        switch route {
-        case .linkParser:
-            return link?.absoluteString ?? trimmedText
-        case .search:
-            return trimmedText
-        case .qrcode:
-            return trimmedText
-        }
-    }
 
     private let trimmedText: String
 
-    init(kind: InboxKind, link: URL?, route: InboxRoute, trimmedText: String) {
+    /// 复制：一律复制**原文**（分享文案里常带标题/描述，粘出去更完整）
+    var copyText: String { trimmedText }
+
+    /// 二维码：链接编链接（短且指向明确），文本编原文
+    var qrcodeText: String { link?.absoluteString ?? trimmedText }
+
+    /// 搜索：用原文当关键词（用户进去还能改）
+    var searchText: String { trimmedText }
+
+    /// 文本长度（面板里显示"12 字"）
+    var textLength: Int { trimmedText.count }
+
+    init(kind: InboxKind, link: URL?, trimmedText: String) {
         self.kind=kind
         self.link=link
-        self.route=route
         self.trimmedText=trimmedText
     }
 }
 
 enum InboxClassifier {
-    /// 关键词上限：超过这个长度就不当关键词（用户不会拿一句长文去搜）
-    private static let keywordLengthLimit=24
-
     private static let xhsHosts=["xiaohongshu.com", "xhslink.com", "xhslink.cn"]
     private static let douyinHosts=["douyin.com", "iesdouyin.com"]
 
+    /// 只判断"这是什么"，不判断"能做什么"（后者在 App 侧的 InboxActions）
     static func classify(_ rawText: String) -> InboxClassification {
         let text=rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url=LinkExtractor.firstURL(in: text) else {
-            let looksLikeKeyword = text.count <= keywordLengthLimit && !text.contains("\n")
-            return InboxClassification(kind: looksLikeKeyword ? .keyword : .text,
-                                       link: nil,
-                                       route: looksLikeKeyword ? .search : .qrcode,
-                                       trimmedText: text)
+            return InboxClassification(kind: .text, link: nil, trimmedText: text)
         }
-
         let host=(url.host ?? "").lowercased()
         let bare=host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+        let kind: InboxKind
         if xhsHosts.contains(where: { bare == $0 || bare.hasSuffix("." + $0) }) {
-            return InboxClassification(kind: .xiaohongshu, link: url, route: .linkParser, trimmedText: text)
+            kind = .xiaohongshu
+        } else if douyinHosts.contains(where: { bare == $0 || bare.hasSuffix("." + $0) }) {
+            kind = .douyin
+        } else {
+            kind = .link
         }
-        if douyinHosts.contains(where: { bare == $0 || bare.hasSuffix("." + $0) }) {
-            return InboxClassification(kind: .douyin, link: url, route: .linkParser, trimmedText: text)
-        }
-        return InboxClassification(kind: .link, link: url, route: .linkParser, trimmedText: text)
+        return InboxClassification(kind: kind, link: url, trimmedText: text)
     }
 }

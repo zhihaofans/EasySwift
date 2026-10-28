@@ -14,7 +14,8 @@ import AppKit
 struct ClipboardView: View {
     var body: some View {
         ClipboardContentView()
-            .modelContainer(for: [ClipItemDataModel.self])
+            // 用共享容器：收件箱的「复制到剪贴板」也要往这张表里写，各建各的会争同一个 store
+            .modelContainer(ClipboardStore.container)
     }
 }
 

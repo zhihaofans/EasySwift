@@ -20,8 +20,10 @@ struct LinkParserView: View {
     @State private var linkInput=""
 
     /// 收件箱分派进来的链接（已经抠好的那条，不是整段分享文案）
-    init(initialLink: String = "") {
+    /// - Parameter autoParse: 是否进来就自动开跑（收件箱「解析链接」为 true，用户不用再点一次）
+    init(initialLink: String = "", autoParse: Bool = false) {
         _linkInput=State(initialValue: initialLink)
+        _autoParseOnAppear=State(initialValue: autoParse && !initialLink.isEmpty)
     }
     /// 输入框焦点：点解析/回车时主动收起键盘
     @FocusState private var inputFocused: Bool
@@ -58,6 +60,9 @@ struct LinkParserView: View {
     /// 撞墙时是"没登录"还是"过期了"，决定弹窗文案
     @State private var loginPromptExpired=false
     @State private var retryTrigger: UUID?
+    /// 进来就自动解析（只跑一次）
+    @State private var autoParseOnAppear=false
+    @State private var didAutoParse=false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -114,6 +119,11 @@ struct LinkParserView: View {
             Text(alertText)
         }
         .setNavigationTitle("链接解析")
+        .onAppear {
+            guard autoParseOnAppear, !didAutoParse else { return }
+            didAutoParse=true
+            parseLink()
+        }
         .mediaPreview($previewRequest)
         .toolbar {
             #if os(iOS)

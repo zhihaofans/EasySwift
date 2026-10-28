@@ -158,12 +158,29 @@ extension LinkParser {
 }
 
 /// 解析器注册表：集中管理所有支持的网站
+/// 解析能力查询结果：给分享/收件箱用，**不发网络请求**（面板要秒开）
+struct LinkParserCapability: Equatable {
+    /// 平台名（"小红书" / "抖音"）；不支持时为 nil
+    let platformName: String?
+
+    var isSupported: Bool { platformName != nil }
+
+    static let unsupported=LinkParserCapability(platformName: nil)
+}
+
 enum LinkParserRegistry {
     /// 新网站在此注册
     static let parsers: [any LinkParser] = [
         XiaohongshuParser(),
         DouyinParser(),
     ]
+
+    /// 这个链接我们能不能解析、属于哪个平台。
+    /// 只做 host 判定，不发请求 —— 收件箱靠它决定要不要显示「解析」按钮。
+    static func capability(for url: URL) -> LinkParserCapability {
+        guard let parser=parsers.first(where: { $0.canParse(url) }) else { return .unsupported }
+        return LinkParserCapability(platformName: parser.name)
+    }
 
     /// 按链接分发给对应解析器
     static func parse(url: URL, progress: LinkParseProgress = .silent) async throws -> LinkParseResult {
