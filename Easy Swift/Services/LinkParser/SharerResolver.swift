@@ -57,6 +57,59 @@ enum SharerResolver {
         9, 8, 0, 6, 6, 3, 9, 7, 4, 5, 6, 9,
     ]
 
+    /// 从小红书主页 HTML 的 `__INITIAL_STATE__` 里取昵称。
+    /// 三种结构都见过：`user.userPageData.userInfo`、`user.userInfo`、`profile.userInfo`
+    static func rednoteNickname(fromState state: [String: Any]) -> String? {
+        let containers: [[String: Any]]=[state["user"], state["profile"]].compactMap { $0 as? [String: Any] }
+        for container in containers {
+            if let pageData=container["userPageData"] as? [String: Any],
+               let info=pageData["userInfo"] as? [String: Any],
+               let nickname=stringValue(info["nickname"])
+            {
+                return nickname
+            }
+            if let info=container["userInfo"] as? [String: Any], let nickname=stringValue(info["nickname"]) {
+                return nickname
+            }
+        }
+        return nil
+    }
+
+    private static func stringValue(_ value: Any?) -> String? {
+        guard let text=value as? String else { return nil }
+        let trimmed=text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == "null" ? nil : trimmed
+    }
+
+    /// 尽力而为：用 App 里的登录态抓一次主页，取分享者昵称。
+    /// 失败（风控/未登录/结构变化）就返回 nil，界面回落显示账号 ID，不算错误。
+    static func rednoteNickname(uid: String, cookieHeader: String?) async -> String? {
+        guard let url=URL(string: "https://www.xiaohongshu.com/user/profile/\(uid)") else { return nil }
+        do {
+            let response=try await VideoHTTP.get(url, ua: VideoHTTP.UA.iOSSafari, headers: [
+                "Origin": "https://www.xiaohongshu.com",
+            ], cookies: cookieHeader)
+            let path=response.url.path.lowercased()
+            if path.contains("login") || path.contains("website-login") {
+                debugPrint("[分享者] 小红书取昵称撞登录墙/风控，回落显示 ID")
+                return nil
+            }
+            guard let state=XiaohongshuParser.parseInitialState(from: response.body) else {
+                debugPrint("[分享者] 小红书主页没有 __INITIAL_STATE__，回落显示 ID")
+                return nil
+            }
+            if let nickname=rednoteNickname(fromState: state) {
+                debugPrint("[分享者] 小红书昵称取到（\(nickname.count) 字）")
+                return nickname
+            }
+            debugPrint("[分享者] 小红书主页里没找到 nickname，回落显示 ID")
+            return nil
+        } catch {
+            debugPrint("[分享者] 小红书取昵称失败: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
     /// 从链接的 `shareRedId` 解出小红书 uid；没有该参数或格式不符返回 nil
     static func rednote(from url: URL) -> LinkSharer? {
         #if DEBUG

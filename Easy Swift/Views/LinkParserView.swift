@@ -62,9 +62,6 @@ struct LinkParserView: View {
     @State private var retryTrigger: UUID?
     /// 进来就自动解析（只跑一次）
     @State private var autoParseOnAppear=false
-    /// 分享者主页（内置浏览器打开）
-    @State private var sharerProfileURL: URL?
-    @State private var showingSharerBrowser=false
     @State private var didAutoParse=false
 
     var body: some View {
@@ -168,11 +165,6 @@ struct LinkParserView: View {
         }
         // 单点全屏预览：iOS 用系统 QuickLook 预览本地文件
         // 抖音等 SPA 页面：HTML 解析失败时用 WebView 执行 JS 兜底
-        .sheet(isPresented: $showingSharerBrowser) {
-            if let sharerProfileURL {
-                WebBrowserView(url: sharerProfileURL)
-            }
-        }
         .sheet(isPresented: $showingWebParser) {
             if let url=webParseURL {
                 VStack(spacing: 8) {
@@ -306,18 +298,42 @@ struct LinkParserView: View {
                     Text("视频")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    ForEach(result.videos, id: \.self) { url in
+                    ForEach(Array(result.videos.enumerated()), id: \.offset) { index, url in
+                        let cover = index < result.videoCovers.count ? result.videoCovers[index] : nil
                         Button {
                             // 单点：全屏预览
                             openPreview(result: result, tapped: .video(url))
                         } label: {
-                            Label("视频链接", systemImage: "play.rectangle")
-                                .foregroundStyle(.tint)
+                            HStack(spacing: 10) {
+                                videoCoverView(cover)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("视频").foregroundStyle(.tint)
+                                    if let host=url.host {
+                                        Text(host).font(.caption2).foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer(minLength: 0)
+                            }
                         }
-                        // 长按：保存 / 用浏览器打开
+                        // 长按：保存视频 / 保存封面 / 用浏览器打开
                         .contextMenu {
-                            Button("保存到相册") { saveOne(result: result, video: url) }
-                            Button("用浏览器打开") { openURL(url) }
+                            Button {
+                                saveOne(result: result, video: url)
+                            } label: {
+                                Label("保存视频", systemImage: "arrow.down.to.line")
+                            }
+                            if let cover {
+                                Button {
+                                    saveOne(result: result, image: cover, motion: nil)
+                                } label: {
+                                    Label("保存封面", systemImage: "photo")
+                                }
+                            }
+                            Button {
+                                openURL(url)
+                            } label: {
+                                Label("用浏览器打开", systemImage: "safari")
+                            }
                         }
                     }
                 }
@@ -410,6 +426,33 @@ struct LinkParserView: View {
         }
     }
 
+    /// 视频封面缩略图：**竖屏比例（9:16）**，抖音/小红书都是竖屏内容
+    /// 没有封面时用同尺寸灰色占位 + 播放图标，避免高度跳变
+    @ViewBuilder
+    private func videoCoverView(_ cover: URL?) -> some View {
+        let size=CGSize(width: 72, height: 128)
+        if let cover {
+            RemoteImageView(url: cover, referer: refererForImage(cover), contentMode: .fill)
+                .frame(width: size.width, height: size.height)
+                .clipped()
+                .background(Color.gray.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    Image(systemName: "play.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.white, .black.opacity(0.45))
+                }
+        } else {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.12))
+                .frame(width: size.width, height: size.height)
+                .overlay {
+                    Image(systemName: "play.rectangle")
+                        .foregroundStyle(.secondary)
+                }
+        }
+    }
+
     /// 分享者（转发这条链接的人）—— 和内容作者不是一回事，文案必须写清楚
     @ViewBuilder
     private func sharerCard(_ sharer: LinkSharer) -> some View {
@@ -428,16 +471,28 @@ struct LinkParserView: View {
             }
             Spacer(minLength: 8)
             if let profile=sharer.profileURL {
-                Button {
-                    sharerProfileURL=profile
-                    showingSharerBrowser=true
-                } label: {
-                    Label("主页", systemImage: "arrow.up.right.square")
+                HStack(spacing: 6) {
+                    // 交给系统打开（Safari / 小红书 App 会自己接管）。
+                    // 不自建 webview：小红书会把非 Safari 环境判成异常访问（安全限制 300013）
+                    Button {
+                        debugPrint("[分享者] 用系统打开主页: \(profile.absoluteString)")
+                        openURL(profile)
+                    } label: {
+                        Label("主页", systemImage: "safari")
+                    }
+                    .buttonStyle(.glass)
+                    .controlSize(.small)
+
+                    Button {
+                        copyToSystemPasteboard(profile.absoluteString)
+                        debugPrint("[分享者] 已复制主页链接")
+                    } label: {
+                        Label("复制", systemImage: "doc.on.doc")
+                    }
+                    .buttonStyle(.glass)
+                    .controlSize(.small)
                 }
-                .buttonStyle(.glass)
-                .controlSize(.small)
-            }
-        }
+            }        }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
@@ -494,6 +549,16 @@ struct LinkParserView: View {
     }
 
     // 打开链接（系统浏览器）
+    /// 复制到**系统**剪贴板（不是应用内剪贴板）—— 这里要拿去别的 App 打开，必须用系统的
+    private func copyToSystemPasteboard(_ text: String) {
+        #if os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #else
+        UIPasteboard.general.string=text
+        #endif
+    }
+
     private func openURL(_ url: URL) {
         #if os(macOS)
         NSWorkspace.shared.open(url)
@@ -712,6 +777,8 @@ struct LinkParserView: View {
 private struct RemoteImageView: View {
     let url: URL
     let referer: String
+    /// 默认等比缩放（网格用）；封面这类固定竖框的用 .fill 铺满
+    var contentMode: ContentMode = .fit
 
     /// 图片加载状态
     private enum LoadState {
@@ -728,7 +795,7 @@ private struct RemoteImageView: View {
             if let image {
                 Image(platformImage: image)
                     .resizable()
-                    .scaledToFit()
+                    .aspectRatio(contentMode: contentMode)
             } else {
                 statusPlaceholder
             }

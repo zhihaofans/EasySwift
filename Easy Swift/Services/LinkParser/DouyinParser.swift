@@ -267,8 +267,10 @@ struct DouyinParser: LinkParser {
 
         var videos: [URL] = []
         // 图文作品的 video 字段是配乐（ies-music 的 mp3），有图片时不能当视频返回
+        var videoCovers: [URL?] = []
         if images.isEmpty, let video = item["video"] as? [String: Any], let url = playURL(video) {
             videos.append(url)
+            videoCovers.append(coverURL(video))
         }
         guard !images.isEmpty || !videos.isEmpty else { return nil }
 
@@ -276,6 +278,7 @@ struct DouyinParser: LinkParser {
         return LinkParseResult(title: desc?.isEmpty == false ? desc : nil,
                                images: images,
                                videos: videos,
+                               videoCovers: videoCovers,
                                motions: motions)
     }
 
@@ -286,6 +289,19 @@ struct DouyinParser: LinkParser {
     }
 
     /// 播放地址：优先 play_addr，其次码率列表；带水印地址把 `playwm` 换成 `play`
+    /// 视频封面：cover / origin_cover / dynamic_cover 里取第一个可用地址
+    static func coverURL(_ video: [String: Any]) -> URL? {
+        for key in ["cover", "origin_cover", "dynamic_cover"] {
+            guard let object=video[key] as? [String: Any],
+                  let list=object["url_list"] as? [String]
+            else { continue }
+            for raw in list {
+                if let url=URL(string: raw) { return url.httpsURL }
+            }
+        }
+        return nil
+    }
+
     static func playURL(_ video: [String: Any]) -> URL? {
         if let address = video["play_addr"] as? [String: Any],
            let list = address["url_list"] as? [String],

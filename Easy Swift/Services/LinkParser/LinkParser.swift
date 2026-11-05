@@ -21,6 +21,8 @@ struct LinkParseResult {
     var title: String?
     var images: [URL]
     var videos: [URL]
+    /// 视频封面：与 `videos` 按下标对齐；没有封面时该位置为 nil（用 [] 表示全都没有）
+    var videoCovers: [URL?]
     /// 动图 / Live Photo：键是它在 `images` 里的下标，值是该图的短视频地址。
     /// 用下标而不是数组下标对齐——动图只出现在部分图上，用数组会整体错位。
     var motions: [Int: URL]
@@ -32,6 +34,7 @@ struct LinkParseResult {
     init(title: String? = nil,
          images: [URL] = [],
          videos: [URL] = [],
+         videoCovers: [URL?] = [],
          motions: [Int: URL] = [:],
          notice: String? = nil,
          sharer: LinkSharer? = nil)
@@ -39,6 +42,7 @@ struct LinkParseResult {
         self.title = title
         self.images = images
         self.videos = videos
+        self.videoCovers = videoCovers
         self.motions = motions
         self.notice = notice
         self.sharer = sharer

@@ -86,7 +86,8 @@ struct XiaohongshuParser: LinkParser {
             }
             let result=LinkParseResult(title: Self.title(from: note),
                                        videos: [videoURL.httpsURL],
-                                       sharer: Self.sharer(from: response.url, pageURL: pageURL))
+                                       videoCovers: [Self.videoCover(from: note)],
+                                       sharer: await Self.sharer(from: response.url, pageURL: pageURL))
             Self.logSuccess(result, kind: "视频笔记")
             return result
         }
@@ -101,18 +102,24 @@ struct XiaohongshuParser: LinkParser {
                                    images: media.images,
                                    motions: media.motions,
                                    notice: media.notice,
-                                   sharer: Self.sharer(from: response.url, pageURL: pageURL))
+                                   sharer: await Self.sharer(from: response.url, pageURL: pageURL))
         Self.logSuccess(result, kind: "图文笔记")
         return result
     }
 
     /// 分享者：从 `shareRedId` 解（纯离线，不发请求）。
     /// 只有**带 App 分享参数**的链接才有这个字段，纯笔记链接解不出来 —— 那就是 nil，不算错误。
-    static func sharer(from finalURL: URL, pageURL: URL) -> LinkSharer? {
-        if let sharer=SharerResolver.rednote(from: finalURL) { return sharer }
-        if let sharer=SharerResolver.rednote(from: pageURL) { return sharer }
-        debugPrint("[小红书] 链接里没有 shareRedId，解不出分享者")
-        return nil
+    /// 分享者：先离线解 `shareRedId` 得到 uid；再用 App 的登录态抓一次主页取昵称（尽力而为）
+    static func sharer(from finalURL: URL, pageURL: URL) async -> LinkSharer? {
+        guard var sharer=SharerResolver.rednote(from: finalURL) ?? SharerResolver.rednote(from: pageURL) else {
+            debugPrint("[小红书] 链接里没有 shareRedId，解不出分享者")
+            return nil
+        }
+        let cookieHeader=await XiaohongshuSession.shared.cookieHeader()
+        if let nickname=await SharerResolver.rednoteNickname(uid: sharer.accountID, cookieHeader: cookieHeader) {
+            sharer.nickname=nickname
+        }
+        return sharer
     }
 
     /// 成功日志：没有这一行的话，"解析出几张图"只能靠界面看，日志里断在 GET 那行
@@ -232,6 +239,59 @@ struct XiaohongshuParser: LinkParser {
     }
 
     /// 视频直链：按清晰度优先级取第一个 masterUrl（兼容 master_url）
+    /// 视频封面。
+    ///
+    /// 不做"钉死键名"：小红书视频笔记的封面字段名换过好几次（`image.first` / `first_frame` /
+    /// `thumbnail` / `cover` …），所以按**数据特征**找 —— 在 `video.image`、`video`、`note.imageList`
+    /// 里递归找第一个像 CDN 图片地址的字符串。全都没命中时把键名打出来，便于下次直接改。
+    static func videoCover(from note: [String: Any]) -> URL? {
+        var searched: [[String: Any]]=[]
+        if let video=note["video"] as? [String: Any] {
+            if let image=video["image"] as? [String: Any] { searched.append(image) }
+            searched.append(video)
+        }
+        if let list=note["imageList"] as? [Any], !list.isEmpty {
+            searched.append(["imageList": list])
+        }
+        for container in searched {
+            if let url=firstImageURL(in: container) { return url }
+        }
+        if let video=note["video"] as? [String: Any] {
+            if let image=video["image"] as? [String: Any] {
+                debugPrint("[小红书] 视频封面没找到，video.image 键=\(image.keys.sorted())")
+            } else {
+                debugPrint("[小红书] 视频封面没找到，video 键=\(video.keys.sorted())")
+            }
+        } else {
+            debugPrint("[小红书] 视频封面没找到，笔记里没有 video 字段")
+        }
+        return nil
+    }
+
+    /// 递归（深度 3）找第一个像图片 CDN 地址的字符串
+    private static func firstImageURL(in value: Any, depth: Int = 0) -> URL? {
+        guard depth <= 3 else { return nil }
+        if let text=value as? String {
+            let lower=text.lowercased()
+            guard lower.hasPrefix("http"), lower.contains("xhscdn.com") || lower.contains("xhsimg") else { return nil }
+            // 视频流地址不是封面
+            guard !lower.contains(".mp4"), !lower.contains("/stream/") else { return nil }
+            return URL(string: text)?.httpsURL
+        }
+        if let dict=value as? [String: Any] {
+            for key in dict.keys.sorted() {
+                if let found=firstImageURL(in: dict[key] as Any, depth: depth + 1) { return found }
+            }
+            return nil
+        }
+        if let array=value as? [Any] {
+            for child in array.prefix(6) {
+                if let found=firstImageURL(in: child, depth: depth + 1) { return found }
+            }
+        }
+        return nil
+    }
+
     static func videoURL(from note: [String: Any]) -> URL? {
         guard let video = note["video"] as? [String: Any] else { return nil }
         let media = video["media"] as? [String: Any] ?? video
