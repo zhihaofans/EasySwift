@@ -84,7 +84,9 @@ struct XiaohongshuParser: LinkParser {
             guard let videoURL = Self.videoURL(from: note) else {
                 throw LinkParseError.unknown("这条笔记带视频，但没取到视频直链（可能是平台改了流结构）")
             }
-            let result=LinkParseResult(title: Self.title(from: note), videos: [videoURL.httpsURL])
+            let result=LinkParseResult(title: Self.title(from: note),
+                                       videos: [videoURL.httpsURL],
+                                       sharer: Self.sharer(from: response.url, pageURL: pageURL))
             Self.logSuccess(result, kind: "视频笔记")
             return result
         }
@@ -98,9 +100,19 @@ struct XiaohongshuParser: LinkParser {
         let result=LinkParseResult(title: Self.title(from: note),
                                    images: media.images,
                                    motions: media.motions,
-                                   notice: media.notice)
+                                   notice: media.notice,
+                                   sharer: Self.sharer(from: response.url, pageURL: pageURL))
         Self.logSuccess(result, kind: "图文笔记")
         return result
+    }
+
+    /// 分享者：从 `shareRedId` 解（纯离线，不发请求）。
+    /// 只有**带 App 分享参数**的链接才有这个字段，纯笔记链接解不出来 —— 那就是 nil，不算错误。
+    static func sharer(from finalURL: URL, pageURL: URL) -> LinkSharer? {
+        if let sharer=SharerResolver.rednote(from: finalURL) { return sharer }
+        if let sharer=SharerResolver.rednote(from: pageURL) { return sharer }
+        debugPrint("[小红书] 链接里没有 shareRedId，解不出分享者")
+        return nil
     }
 
     /// 成功日志：没有这一行的话，"解析出几张图"只能靠界面看，日志里断在 GET 那行

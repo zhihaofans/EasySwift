@@ -41,7 +41,11 @@ struct DouyinParser: LinkParser {
         // 2. 两条路线同时跑，谁先出结果用谁：
         //    分享页 HTTP 一般 1 秒内返回（实测有时能直接拿到数据），隐藏 WebView 要 5–20 秒；
         //    只在 WebView 卡住时让用户干等 18 秒，而不是 40 秒。
-        return try await Self.race(awemeID: awemeID, progress: progress)
+        var result=try await Self.race(awemeID: awemeID, progress: progress)
+        // 分享者：从展开后的长链里解 uid（u_code / share_user_id / activity_info），
+        // 再查一次 webcast 换昵称与 sec_uid；失败只是少显示昵称，不影响主解析
+        result.sharer=await SharerResolver.douyin(from: page, lookup: true)
+        return result
     }
 
     /// 哪条路线出的结果

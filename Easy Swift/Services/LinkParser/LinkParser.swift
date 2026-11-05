@@ -26,18 +26,22 @@ struct LinkParseResult {
     var motions: [Int: URL]
     /// 成功但有话说：去水印回退、动图缺失之类，界面上提示一次即可
     var notice: String?
+    /// 分享者（把这条链接转发出来的人），不是内容作者；分享链接里没带参数时为 nil
+    var sharer: LinkSharer?
 
     init(title: String? = nil,
          images: [URL] = [],
          videos: [URL] = [],
          motions: [Int: URL] = [:],
-         notice: String? = nil)
+         notice: String? = nil,
+         sharer: LinkSharer? = nil)
     {
         self.title = title
         self.images = images
         self.videos = videos
         self.motions = motions
         self.notice = notice
+        self.sharer = sharer
     }
 
     var isEmpty: Bool {

@@ -62,6 +62,9 @@ struct LinkParserView: View {
     @State private var retryTrigger: UUID?
     /// 进来就自动解析（只跑一次）
     @State private var autoParseOnAppear=false
+    /// 分享者主页（内置浏览器打开）
+    @State private var sharerProfileURL: URL?
+    @State private var showingSharerBrowser=false
     @State private var didAutoParse=false
 
     var body: some View {
@@ -165,6 +168,11 @@ struct LinkParserView: View {
         }
         // 单点全屏预览：iOS 用系统 QuickLook 预览本地文件
         // 抖音等 SPA 页面：HTML 解析失败时用 WebView 执行 JS 兜底
+        .sheet(isPresented: $showingSharerBrowser) {
+            if let sharerProfileURL {
+                WebBrowserView(url: sharerProfileURL)
+            }
+        }
         .sheet(isPresented: $showingWebParser) {
             if let url=webParseURL {
                 VStack(spacing: 8) {
@@ -250,6 +258,9 @@ struct LinkParserView: View {
                     Label(notice, systemImage: "info.circle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+                if let sharer=result.sharer {
+                    sharerCard(sharer)
                 }
                 if result.images.isNotEmpty {
                     let motionCount=result.motions.count
@@ -397,6 +408,39 @@ struct LinkParserView: View {
                 }
             }
         }
+    }
+
+    /// 分享者（转发这条链接的人）—— 和内容作者不是一回事，文案必须写清楚
+    @ViewBuilder
+    private func sharerCard(_ sharer: LinkSharer) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "person.crop.circle")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(sharer.displayName)
+                    .font(.subheadline)
+                Text("分享者 · \(sharer.platform.title) · ID \(sharer.accountID)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer(minLength: 8)
+            if let profile=sharer.profileURL {
+                Button {
+                    sharerProfileURL=profile
+                    showingSharerBrowser=true
+                } label: {
+                    Label("主页", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.glass)
+                .controlSize(.small)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
     }
 
     /// 失败分流：能从界面上解决的（验证码、页面改版）就别只丢一句错误
