@@ -45,6 +45,7 @@ struct DouyinParser: LinkParser {
         // 分享者：从展开后的长链里解 uid（u_code / share_user_id / activity_info），
         // 再查一次 webcast 换昵称与 sec_uid；失败只是少显示昵称，不影响主解析
         result.sharer=await SharerResolver.douyin(from: page, lookup: true)
+        result.finalURL=page
         return result
     }
 

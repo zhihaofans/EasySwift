@@ -30,6 +30,8 @@ struct LinkParseResult {
     var notice: String?
     /// 分享者（把这条链接转发出来的人），不是内容作者；分享链接里没带参数时为 nil
     var sharer: LinkSharer?
+    /// 展开/重定向后的最终地址：解析历史按它去重（短链不同、指向同一篇时只留一条）
+    var finalURL: URL?
 
     init(title: String? = nil,
          images: [URL] = [],
@@ -37,7 +39,8 @@ struct LinkParseResult {
          videoCovers: [URL?] = [],
          motions: [Int: URL] = [:],
          notice: String? = nil,
-         sharer: LinkSharer? = nil)
+         sharer: LinkSharer? = nil,
+         finalURL: URL? = nil)
     {
         self.title = title
         self.images = images
@@ -46,6 +49,7 @@ struct LinkParseResult {
         self.motions = motions
         self.notice = notice
         self.sharer = sharer
+        self.finalURL = finalURL
     }
 
     var isEmpty: Bool {

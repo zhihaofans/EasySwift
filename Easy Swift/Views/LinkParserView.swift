@@ -126,11 +126,18 @@ struct LinkParserView: View {
         }
         .mediaPreview($previewRequest)
         .toolbar {
-            #if os(iOS)
-            ToolbarItem(placement: .navigationBarTrailing) { saveToAlbumButton }
-            #else
-            ToolbarItem(placement: .automatic) { saveToAlbumButton }
-            #endif
+            ToolbarItem(placement: trailingPlacement) {
+                // 解析历史入口：和「保存相册」并排放在右上角
+                NavigationLink {
+                    // 历史页的 @Query 需要容器：全 App 只有剪贴板页挂了自己的容器，
+                    // 这里不显式挂会读不到数据（不更新/空白）
+                    LinkHistoryView()
+                        .modelContainer(AppDataStore.container)
+                } label: {
+                    Label("解析历史", systemImage: "clock.arrow.circlepath")
+                }
+            }
+            ToolbarItem(placement: trailingPlacement) { saveToAlbumButton }
         }
         .overlay {
             if isSaving {
@@ -406,6 +413,7 @@ struct LinkParserView: View {
                     parseStage=nil
                     parseStartedAt=nil
                     result=parsed
+                    recordHistory(parsed)
                 }
             } catch let error as LinkParseError {
                 await MainActor.run {
@@ -451,6 +459,19 @@ struct LinkParserView: View {
                         .foregroundStyle(.secondary)
                 }
         }
+    }
+
+    /// 记一条解析历史（去重按最终地址，重复解析只更新时间）
+    @MainActor
+    private func recordHistory(_ parsed: LinkParseResult) {
+        let final=parsed.finalURL ?? extractURL(from: linkInput)
+        guard let final else { return }
+        let platform=LinkParserRegistry.capability(for: final).platformName ?? ""
+        let ok=LinkHistoryStore.record(sourceURL: linkInput,
+                                       finalURL: final.absoluteString,
+                                       platform: platform,
+                                       result: parsed)
+        debugPrint("[解析历史] 记录结束 ok=\(ok) platform=\(platform.isEmpty ? "未知" : platform)")
     }
 
     /// 分享者（转发这条链接的人）—— 和内容作者不是一回事，文案必须写清楚
@@ -556,6 +577,14 @@ struct LinkParserView: View {
         NSPasteboard.general.setString(text, forType: .string)
         #else
         UIPasteboard.general.string=text
+        #endif
+    }
+
+    private var trailingPlacement: ToolbarItemPlacement {
+        #if os(iOS)
+        return .navigationBarTrailing
+        #else
+        return .automatic
         #endif
     }
 

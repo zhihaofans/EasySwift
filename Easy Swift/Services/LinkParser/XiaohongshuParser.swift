@@ -87,7 +87,8 @@ struct XiaohongshuParser: LinkParser {
             let result=LinkParseResult(title: Self.title(from: note),
                                        videos: [videoURL.httpsURL],
                                        videoCovers: [Self.videoCover(from: note)],
-                                       sharer: await Self.sharer(from: response.url, pageURL: pageURL))
+                                       sharer: await Self.sharer(from: response.url, pageURL: pageURL),
+                                       finalURL: response.url)
             Self.logSuccess(result, kind: "视频笔记")
             return result
         }
@@ -102,7 +103,8 @@ struct XiaohongshuParser: LinkParser {
                                    images: media.images,
                                    motions: media.motions,
                                    notice: media.notice,
-                                   sharer: await Self.sharer(from: response.url, pageURL: pageURL))
+                                   sharer: await Self.sharer(from: response.url, pageURL: pageURL),
+                                   finalURL: response.url)
         Self.logSuccess(result, kind: "图文笔记")
         return result
     }

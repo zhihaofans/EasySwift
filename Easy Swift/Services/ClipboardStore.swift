@@ -15,24 +15,8 @@ import SwiftData
 import SwiftUtils
 
 enum ClipboardStore {
-    /// 全 App 共用一份容器（剪贴板页与收件箱都用它，避免两个容器争同一个 store 文件）
-    ///
-    /// 容器建不起来时退回**内存容器**：本次运行还能用，重启丢 —— 但会打日志说清楚，
-    /// 不能静默变成"存了读不回来"。
-    static let container: ModelContainer = {
-        do {
-            return try ModelContainer(for: ClipItemDataModel.self)
-        } catch {
-            debugPrint("[剪贴板] 容器创建失败: \(error.localizedDescription)，退回内存容器（重启后丢失）")
-            do {
-                return try ModelContainer(for: ClipItemDataModel.self,
-                                          configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-            } catch {
-                // 连内存容器都建不起来说明 schema 本身有问题，这时崩溃比静默假成功更好
-                fatalError("[剪贴板] 连内存容器都创建失败: \(error)")
-            }
-        }
-    }()
+    /// 全 App 共用一份容器（见 AppDataStore：剪贴板与解析历史必须用同一个容器）
+    static var container: ModelContainer { AppDataStore.container }
 
     /// 存一条进应用内剪贴板。返回是否真的落库（调用方据此提示用户，不要假装成功）。
     @MainActor
