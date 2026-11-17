@@ -3,29 +3,42 @@
 > **只放待办。** 已完成的事按版本记在 [CHANGELOG.md](CHANGELOG.md)；硬约束与验证方式见 [AGENTS.md](AGENTS.md)；架构以源码为准。
 > 新增条目要写清：**改哪里 + 怎么算做完**。不要记录本机绝对路径、账号、Token。
 
-最后更新：2026-11-05 · 待办 5 条
+最后更新：2026-11-18 · 待办 12 条
 
 | 分区 | 含义 | 条数 |
 |---|---|---|
-| [P2 等条件](#p2--等条件) | 缺设备、缺权限、或上架才需要 | 5 |
+| [P1 可直接做](#p1--可直接做改法明确不牵涉决策) | 改法明确，不牵涉决策 | 7 |
+| [P2 等条件](#p2--等条件缺设备缺权限或上架才需要) | 缺设备、缺权限、或上架才需要 | 5 |
 
 ---
 
-## P1 · 可直接做（SwiftUtils 0.0.33 带来的替换）
+## P1 · 可直接做（改法明确，不牵涉决策）
 
-- [ ] **日志后端切 OSLog** —— `DebugLog` 现在走 stderr + 每次 `fflush(stdout)`（真机块缓冲踩过坑）。
-      0.0.33 提供 `LogUtil.configureLogging(backend: OSLogBackend())` 与 `LogExporter`（按 subsystem 导出最近 N 秒）。
-      **算完**：真机日志能在 Console.app 里按 subsystem 过滤，`fflush` 可去掉
-- [ ] **图片缩略图加缓存 + EXIF 归一** —— 历史页/解析页缩略图每次滚动都重新下载（`URLSession.shared.data` 直连），
-      且 `ImageUtil` 已提供"按 EXIF 方向转正、顺带清掉旧像素尺寸"的缩略图 API。**算完**：同一 URL 二次进入不重复下载
-- [ ] **时间显示换 `RelativeTimeFormatter`** —— 收件箱/历史现在用 `.formatted(date:time:)`；
-      库里有本地化相对时间（未来时间不会显示成"刚刚"）。**算完**：列表显示"3 分钟前"且有单测断言边界
-- [ ] **超时/重试收口** —— `DouyinWebExtractor` 手写 deadline、`VideoHTTP` 各自设 timeout、
-      解析器里零散的重试逻辑 → 统一用 `withTimeout` / `RetryPolicy`。**算完**：超时路径有可复现用例
-- [ ] **文件写入换 `FileUtil`** —— `InboxShared` 自己写原子写/唯一名，`MediaDownloader` 手拼临时文件名；
+- [ ] **导出完整日志**（设置页 → 导出日志 → 分享文件）
+      - 现状：`LogExporter.export(subsystem:last:)` 只能读 **OSLogStore 的有限窗口**，且 debug 级 os_log 默认不落盘、
+        `isPublic: false` 的内容是 `<private>` —— **拿不到"从启动到现在"的完整日志**
+      - 做法：新增 `FileLogBackend`（实现 `LogBackend`）写 `Application Support/Logs/app-YYYYMMDD.log`，
+        按天滚动 + 单文件上限约 5MB + 保留 7 天；DEBUG 三写（Console + OSLog + File），RELEASE 写 File + OSLog
+        —— **文件才是导出用的真相源**
+      - 导出：最近 N 天拼成一个 txt（默认全部，上限 7 天），文件头附 App 版本 / 构建号 / 系统版本 / 机型 / 导出时间；
+        设置页入口 + 系统分享
+      - 脱敏：导出前过滤 `web_session` / `a1` / `token` / `cookie` 的值（正则），文件头注明已脱敏
+      - **算完**：冷启动 → 做几次操作 → 导出 → 文件含启动到导出全过程；杀进程重开仍追加；超上限按天裁剪；能分享出去
+- [ ] **日志分 category** —— 现在只有一个 `app` category。按功能拆 `parsing` / `inbox` / `ui`（参考 OMF 的
+      `AppLog.general` / `.imports`），导出时可按分类过滤。**算完**：`log show --predicate 'category == "parsing"'` 只看解析日志
+- [ ] **单元测试 target（Swift Testing）** —— `SharerResolver` 解码、`InboxClassifier` 分类、`LinkHistoryStore` 去重/裁剪、
+      `PhotoLibrarySaver.accessError` 都是纯函数，把这几轮现写的 harness 断言直接搬成 `@Test` / `#expect`
+      （OMF 有 24 个测试文件可照结构）。**算完**：⌘U 能跑并覆盖上述 4 处
+- [ ] **图片缩略图加缓存 + EXIF 归一** —— 历史页/解析页缩略图每次滚动都重新下载（`URLSession.shared.data` 直连）；
+      `ImageUtil` 已提供"按 EXIF 方向转正、清掉旧像素尺寸"的缩略图 API。**算完**：同一 URL 二次进入不重复下载
+- [ ] **时间显示换 `RelativeTimeFormatter`** —— 收件箱/历史现在用 `.formatted(date:time:)`；库里是本地化相对时间
+      （未来时间不会显示成"刚刚"）。**算完**：列表显示"3 分钟前"，边界有断言
+- [ ] **超时/重试收口** —— `DouyinWebExtractor` 手写 deadline、`VideoHTTP` 各自设 timeout、解析器里零散重试 →
+      统一用 `withTimeout` / `RetryPolicy`。**算完**：超时路径有可复现用例
+- [ ] **文件写入换 `FileUtil`** —— `InboxShared` 自己写原子写/唯一名、`MediaDownloader` 手拼临时文件名；
       0.0.33 提供 `FileUtil` 原子读写 + `createUniqueFile`（内核级判重）。**算完**：并发保存不互相覆盖
 
-## P2 · 等条件
+## P2 · 等条件（缺设备、缺权限或上架才需要）
 
 - [ ] **iPhone Duo 适配** —— 现状：App 在 Duo 上**以手机宽度窗口运行**，内容挤左、右侧大片留白，工具栏被压中间。
       已确认与部署目标无关（提到 27 后重装仍如此），下一步查 Info.plist / Scene 声明或 `UIRequiresFullScreen`。
@@ -38,10 +51,12 @@
       6. 横竖屏 + 分屏：列表/网格/工具栏不裁切、按钮不被遮挡
       7. 每次改动跑一次 Duo 并截图（截图必须带 `--display=1`）
 - [ ] **`PrivacyInfo.xcprivacy`** —— 用了 UserDefaults（CA92.1）等 Required Reason API，上架前必须补（ITMS-91053）。
-- [ ] **测试 target** —— 目前只有仓库外 `swiftc` harness；若要长期维护，加 unit test 覆盖解析纯函数、日期换算、参数编码、收件箱分类。
-- [ ] **分享扩展无法拉起主 App** —— 实测：`extensionContext.open` 回调 false、responder 链 `openURL:` 被系统忽略。
-      待探索：① 扩展写入后由 App 发本地通知、点通知进 App（需通知权限）；② Action Extension / 快捷指令；③ 等新 API。
-      **别再放一个点了没反应的按钮。**
+      现成模板可看 `~/Xcode/OhMyFile` 的 app + 扩展两份（需你同意后引用其结构，不复制文件）
+- [ ] **可选：App 锁（Face ID / Touch ID）** —— 剪贴板与收件箱里是私人内容。参考 OMF 的 `AppLockController`
+      （`LAContext` + `biometryInfo`），0.0.33 的 `AuthUtil` 已把可用性与类型收敛好。
+      **算完**：开启后冷启动 / 回前台需生物识别，关闭后不打扰
+- [ ] **分享扩展支持图片**（现在只收 text / url）—— OMF 用 `NSExtensionActivationSupportsImageWithMaxCount` 收图片。
+      要做需先定去处（相册 or 解析历史），否则收进来无处可放
 - [ ] **等真实样本的两条**（构造不出来，遇到再看日志）：
       - `noteLoginWall()`：解析撞墙把 valid 降级 expired —— 私密/仅关注可见的笔记才撞墙，而这类笔记复制不出链接
       - 「已登录 / 过期」三态在**小红书**上的界面文案 —— 抖音侧已截过图

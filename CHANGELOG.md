@@ -9,6 +9,22 @@
 
 **变更**
 
+- 日志后端切换：App 启动时配置 `OSLogBackend`（subsystem = bundle id），DEBUG 为
+  「控制台 + 系统日志」双写、RELEASE 只写系统日志；去掉 `debugPrint` 里对抗 stdout 缓冲的 `fflush`
+  （实测：只切 OSLog 后 `devicectl --console` 里应用日志全消失，所以 DEBUG 保留控制台通道）
+
+**修复**
+
+- 分享扩展新增「打开 Easy Swift」按钮：按 OhMyFile 的做法，responder 链上强转 `UIApplication` 调
+  `open(_:options:)`，并延后 0.6 秒再 `completeRequest`（此前 fail 的原因：`responds(to:)+perform`
+  命中的不是 UIApplication；complete 太早会把唤起取消）。
+  **真机验证通过**：从其他 App 分享 → 点「打开 Easy Swift」→ 直接跳进 App。
+  注意这是**非稳定 API**（技能手册也标了），系统升级后要复测
+- 首页收件箱条数跑到 chevron 右边：`.badge` 在 iOS 26/27 被系统排在 disclosure 指示器外侧，
+  改为把条数画进行内容（胶囊，固定在 chevron 左侧），双栏侧栏同样适用
+
+**变更**
+
 - 升级 SwiftUtils `0.0.28 → 0.0.33`：移除 swift-log 依赖（`Package.resolved` 里已无 `swift-log`），
   工程回到只用 SwiftUtils + CrashKit 两个包
 - 处理两个破坏性变更：
