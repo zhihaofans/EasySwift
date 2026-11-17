@@ -3,28 +3,16 @@
 > **只放待办。** 已完成的事按版本记在 [CHANGELOG.md](CHANGELOG.md)；硬约束与验证方式见 [AGENTS.md](AGENTS.md)；架构以源码为准。
 > 新增条目要写清：**改哪里 + 怎么算做完**。不要记录本机绝对路径、账号、Token。
 
-最后更新：2026-11-18 · 待办 11 条
+最后更新：2026-11-18 · 待办 10 条
 
 | 分区 | 含义 | 条数 |
 |---|---|---|
-| [P1 可直接做](#p1--可直接做改法明确不牵涉决策) | 改法明确，不牵涉决策 | 6 |
+| [P1 可直接做](#p1--可直接做改法明确不牵涉决策) | 改法明确，不牵涉决策 | 5 |
 | [P2 等条件](#p2--等条件缺设备缺权限或上架才需要) | 缺设备、缺权限、或上架才需要 | 5 |
 
 ---
 
 ## P1 · 可直接做（改法明确，不牵涉决策）
-
-- [ ] **SwiftUI 测试页做成"OMF 组件样例集"** —— 现在 [UITestView.swift](<Easy Swift/Views/UITestView.swift>) 只有 12 个基础控件
-      （按钮/开关/滑块/步进/分段/输入框/日期/颜色/进度/链接/图标/标签）。把 OhMyFile 里用到、而我们没示范过的
-      原生 SwiftUI 用法逐条搬进来做成可交互样例，作为以后写页面的活参考：
-      1. 布局与容器：`Grid` / `LazyVGrid` / `LazyHGrid` / `ViewThatFits` / `containerRelativeFrame` / `safeAreaInset`
-      2. 列表与搜索：`.searchable` / `.listStyle` 各档 / `.swipeActions` / `.refreshable` / `.scrollPosition`
-      3. 弹层：`.sheet` + `.presentationDetents` / `.fullScreenCover` / `.popover` / `.confirmationDialog`
-      4. 文件与拖放：`.fileImporter` / `.fileExporter`（安全作用域）/ `.draggable` + `.dropDestination`
-      5. 交互与反馈：`.contextMenu` / `.sensoryFeedback` / `.symbolEffect` / `.contentTransition`
-      6. 文本与隐私：`.textSelection` / `.privacySensitive` / `.redacted` / Dynamic Type 档位对照
-      7. 表格（iPad/macOS）：`Table` 排序与列宽
-      **算完**：每类有一个可点/可拖的样例 + 一段说明文字；iPhone（紧凑）与 iPad（常规宽度）都渲染正常，无裁切
 
 - [ ] **单元测试 target（Swift Testing）** —— `SharerResolver` 解码、`InboxClassifier` 分类、`LinkHistoryStore` 去重/裁剪、
       `PhotoLibrarySaver.accessError` 都是纯函数，把这几轮现写的 harness 断言直接搬成 `@Test` / `#expect`

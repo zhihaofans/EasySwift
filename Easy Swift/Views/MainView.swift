@@ -62,7 +62,18 @@ struct MainView: View {
     /// 收件箱角标：未处理条数
     @ObservedObject private var inbox=InboxStore.shared
     /// 双栏时的选中项；默认落在收件箱，避免打开是空白占位（紧凑布局忽略它）
-    @State private var selectedFeature: HomeFeature? = .inbox
+    @State private var selectedFeature: HomeFeature? = Self.initialFeature
+
+    /// DEBUG：`-openUITest [gallery]` 直接落到组件样例页，方便截图与手测定位。
+    /// 只在 Debug 生效，不影响正式使用路径。
+    private static var initialFeature: HomeFeature? {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-openUITest") {
+            return .uiTest
+        }
+        #endif
+        return .inbox
+    }
     /// 紧凑布局时跟着导航栈进出
     @Environment(\.horizontalSizeClass) private var sizeClass
 
