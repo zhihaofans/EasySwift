@@ -16,9 +16,9 @@ import SwiftUtils
 func debugPrint(_ items: Any...) {
     #if DEBUG
     LogUtil.d(items.map { "\($0)" }.joined(separator: " "))
-    // 真机调试时 stdout 是管道而不是终端，默认按块缓冲：
-    // 日志会攒到 4KB 才吐出来，表现为「日志停在某一秒，其实后面还在打」。
-    // 实测在真机上排查相册保存时，最后 3 条成功日志一直没出现，差点被当成卡死。
-    fflush(stdout)
+    // 后端见 AppLogging：DEBUG 是「控制台 + 系统日志」双写，RELEASE 只写系统日志。
+    // 日志不经过 stdout（ConsoleBackend 写的是 stderr，本身不缓冲），
+    // 所以原先对抗块缓冲的 `fflush(stdout)` 已去掉。
+    // 历史：真机 stdout 是管道、按块缓冲，日志会攒到 4KB 才吐，排查时以为保存卡死。
     #endif
 }

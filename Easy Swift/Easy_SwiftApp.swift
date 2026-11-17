@@ -7,10 +7,14 @@
 
 import CrashKit
 import SwiftUI
+import SwiftUtils
 
 @main
 struct Easy_SwiftApp: App {
     init() {
+        // 日志先配好再打第一条：DEBUG 是「控制台 + 系统日志」双写，RELEASE 只写系统日志
+        AppLogging.install()
+
         // 尽早安装：崩溃可能发生在第一帧渲染之前。
         // 目录显式算好再传进去：排查时日志里要能看到**完整路径**，
         // 只打 lastPathComponent 的话，容器路径与 crash 前的写入路径根本对不上号。
