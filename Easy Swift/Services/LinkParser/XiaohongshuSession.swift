@@ -75,7 +75,7 @@ actor XiaohongshuSession {
         let kept = cookies.filter { Self.isRelevant($0) }
         guard !kept.isEmpty, let header = Self.header(from: kept) else { return false }
         // 只打名字不打值：这几个都是凭据。名字列表能回答"到底存进去了哪几条"
-        debugPrint("[小红书] 保存 cookie: \(kept.map(\.name).sorted())")
+        debugPrint(.parsing, "[小红书] 保存 cookie: \(kept.map(\.name).sorted())")
         return save(header: header)
     }
 
@@ -119,7 +119,7 @@ actor XiaohongshuSession {
             return .expired
         case .unavailable:
             // 平台暂时不可用：维持原状态，不因一次抖动把用户判成过期
-            debugPrint("[小红书] 探测遇到 5xx/网络问题，状态保持不变: \(state().rawValue)")
+            debugPrint(.parsing, "[小红书] 探测遇到 5xx/网络问题，状态保持不变: \(state().rawValue)")
             return state()
         }
     }
@@ -128,7 +128,7 @@ actor XiaohongshuSession {
     /// 从没登录过的不要被标记成过期，否则文案会误导用户。
     func noteLoginWall() {
         guard hasStoredCookie, state() == .valid else { return }
-        debugPrint("[小红书] 解析撞到登录墙，把状态从 valid 改为 expired")
+        debugPrint(.parsing, "[小红书] 解析撞到登录墙，把状态从 valid 改为 expired")
         setState(.expired)
     }
 
@@ -139,12 +139,12 @@ actor XiaohongshuSession {
                                                       ua: VideoHTTP.UA.desktopChrome,
                                                       cookies: cookieHeader)
         else {
-            debugPrint("[小红书] 登录态探测请求失败（网络）")
+            debugPrint(.parsing, "[小红书] 登录态探测请求失败（网络）")
             return .unavailable
         }
         let path = response.url.path.lowercased()
         let gated = path.contains("/login") || path.contains("website-login") || path.contains("captcha")
-        debugPrint("[小红书] 登录态探测: status=\(response.status) final=\(response.url.absoluteString.prefix(80)) 登录墙=\(gated)")
+        debugPrint(.parsing, "[小红书] 登录态探测: status=\(response.status) final=\(response.url.absoluteString.prefix(80)) 登录墙=\(gated)")
 
         if gated { return .gated }
         switch response.status {
@@ -154,7 +154,7 @@ actor XiaohongshuSession {
             let body = response.body
             let looksLoggedOut = body.contains("扫码登录") || body.contains("验证码登录") || body.contains("登录后免费畅享")
             if looksLoggedOut {
-                debugPrint("[小红书] 探测返回 200 但页面是登录墙，判为未登录")
+                debugPrint(.parsing, "[小红书] 探测返回 200 但页面是登录墙，判为未登录")
                 return .gated
             }
             return .ok

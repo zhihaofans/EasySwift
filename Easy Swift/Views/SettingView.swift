@@ -25,6 +25,40 @@ struct SettingView: View {
     @State private var showingXhsQRLogin = false
     @State private var showingXhsCookieEdit = false
     @State private var xhsState: XiaohongshuLoginState = .unknown
+    /// 日志导出：生成期间禁点，失败给提示
+    @State private var isExportingLogs = false
+
+    /// 导出最近 7 天日志：生成 txt → 交给系统分享
+    private func exportLogs() {
+        guard !isExportingLogs else { return }
+        isExportingLogs=true
+        Task {
+            // 打包要读几个文件，放后台；完成后回主线程弹分享
+            let url=await Task.detached(priority: .userInitiated) {
+                AppLogging.writeExportFile()
+            }.value
+            await MainActor.run {
+                isExportingLogs=false
+                if let url {
+                    ShareUtil().share(item: url)
+                } else {
+                    alertTitle="导出失败"
+                    alertText="没能生成日志文件，请稍后重试"
+                    showingAlert=true
+                }
+            }
+        }
+    }
+
+    /// 复制日志目录路径（真机排查时方便直接定位文件）
+    private func copyLogPath() {
+        let path=AppLogging.logsDirectory.path
+        ClipboardUtil().setString(path)
+        alertTitle="已复制"
+        alertText=path
+        showingAlert=true
+    }
+
     var body: some View {
         VStack {
             List {
@@ -77,6 +111,32 @@ struct SettingView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                Section(header: Text("日志")) {
+                    Button {
+                        exportLogs()
+                    } label: {
+                        if isExportingLogs {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Text("正在打包日志…")
+                            }
+                        } else {
+                            Label("导出日志", systemImage: "doc.text.magnifyingglass")
+                        }
+                    }
+                    .disabled(isExportingLogs)
+
+                    Button {
+                        copyLogPath()
+                    } label: {
+                        Label("复制日志目录", systemImage: "folder")
+                    }
+
+                    Text("导出最近 7 天完整日志（已过滤 cookie / token 一类凭据值），行格式：[时间] [级别] [分类] 内容。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section(header: Text("About")) {
                     TextItem(title: "开发者", detail: "zhihaofans")
                     TextItem(title: "Version", detail: "\(AppUtil().getAppVersion()) (\(AppUtil().getAppBuild()))" /* "0.0.1" */ )

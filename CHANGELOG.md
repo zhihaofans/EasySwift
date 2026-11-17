@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+**新增**
+
+- **导出完整日志**：设置页「导出日志」把最近 7 天的日志打包成 txt 交给系统分享；
+  内容含 App 版本 / 构建号 / 系统版本 / 导出时间，**导出前过滤 web_session / a1 / token / cookie 等凭据值**
+  （`***` 替换，键名保留），文件头注明已脱敏
+- **文件日志后端**：`Application Support/Logs/app-YYYYMMDD.log`，按天滚动、单文件 5MB 上限（超出轮转为 `.log.1`）、保留 7 天。
+  采用它是因为 `LogExporter` 只能读 OSLogStore 的有限窗口、debug 级默认不落盘，导不出"从启动到现在"的完整日志
+- **日志分类**：`app` / `parsing` / `inbox` / `ui`，通过 `debugPrint(.parsing, …)` 标注（共归类 58 处调用）；
+  OSLog 按 category 建 `Logger`，导出文本里带 `[分类]` 列
+
 **变更**
 
 - 日志后端切换：App 启动时配置 `OSLogBackend`（subsystem = bundle id），DEBUG 为

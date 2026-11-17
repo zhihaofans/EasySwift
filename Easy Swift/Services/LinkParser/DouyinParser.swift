@@ -32,7 +32,7 @@ struct DouyinParser: LinkParser {
     func parse(url: URL, progress: LinkParseProgress) async throws -> LinkParseResult {
         // 1. 短链展开（分享链认 iOS UA，桌面 UA 拿不到 Location）
         let page = try await expandIfNeeded(url, progress: progress)
-        debugPrint("[抖音] 展开后: \(page.absoluteString)")
+        debugPrint(.parsing, "[抖音] 展开后: \(page.absoluteString)")
 
         guard let awemeID = Self.awemeID(from: page) else {
             throw LinkParseError.unknown("没从链接里识别出作品 id，请确认这是作品分享链接")
@@ -70,7 +70,7 @@ struct DouyinParser: LinkParser {
         // （图文作品的动图只有 WebView 拿得到，所以冷却期内等于"暂时没有动图"）
         let skipWebView=DouyinWebViewCooldown.isCoolingDown
         if skipWebView {
-            debugPrint("[抖音] WebView 冷却中，直接走 HTTP")
+            debugPrint(.parsing, "[抖音] WebView 冷却中，直接走 HTTP")
         }
         // 状态提示要说真话：冷却期内根本没开浏览器，就别显示"正在启用浏览器内核"
         progress(skipWebView ? .requestingPage : .racingPageAndWebView)
@@ -110,7 +110,7 @@ struct DouyinParser: LinkParser {
                         if webAlive {
                             progress(.waitingMotions(count: result.images.count))
                         }
-                        debugPrint("[抖音] HTTP 先拿到 \(result.images.count) 张图（无动图），继续等 WebView 补动图")
+                        debugPrint(.parsing, "[抖音] HTTP 先拿到 \(result.images.count) 张图（无动图），继续等 WebView 补动图")
                     }
                 } catch let error as DouyinExtractError {
                     webErrors.append(error)
@@ -131,7 +131,7 @@ struct DouyinParser: LinkParser {
 
             group.cancelAll()
             if let httpImageResult {
-                debugPrint("[抖音] WebView 没补上动图，退回 HTTP 结果")
+                debugPrint(.parsing, "[抖音] WebView 没补上动图，退回 HTTP 结果")
                 return httpImageResult
             }
             throw Self.bestError(webErrors: webErrors, httpErrors: httpErrors)
@@ -194,7 +194,7 @@ struct DouyinParser: LinkParser {
 
     static func parseSharePage(awemeID: String) async throws -> LinkParseResult {
         let url = URL(string: "https://www.iesdouyin.com/share/video/\(awemeID)/")!
-        debugPrint("[抖音] HTTP 回退: \(url.absoluteString)")
+        debugPrint(.parsing, "[抖音] HTTP 回退: \(url.absoluteString)")
         let response = try await VideoHTTP.get(url, ua: VideoHTTP.UA.iOSSafari, headers: ["Referer": "https://www.iesdouyin.com/"])
         guard (200 ..< 300).contains(response.status) else {
             throw LinkParseError.unknown("抖音分享页返回 HTTP \(response.status)（可能需要换网络或稍后重试）")
@@ -205,7 +205,7 @@ struct DouyinParser: LinkParser {
         guard let item = videoItem(in: state), let result = makeResult(item) else {
             throw LinkParseError.unknown("抖音没有返回该作品的数据（作品可能已删除，或需要登录）")
         }
-        debugPrint("[抖音] 解析成功(HTTP 回退): 标题=\(result.title ?? "nil") 图=\(result.images.count) 动图=\(result.motions.count) 视频=\(result.videos.count)")
+        debugPrint(.parsing, "[抖音] 解析成功(HTTP 回退): 标题=\(result.title ?? "nil") 图=\(result.images.count) 动图=\(result.motions.count) 视频=\(result.videos.count)")
         return result
     }
 

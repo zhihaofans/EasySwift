@@ -37,7 +37,7 @@ final class InboxStore: ObservableObject {
             let resolved=InboxFile.resolveDirectory()
             self.fileURL=resolved.url.appendingPathComponent(InboxFile.fileName)
             usesAppGroup=resolved.usesAppGroup
-            debugPrint("[收件箱] 存储位置=\(resolved.usesAppGroup ? "AppGroup" : "AppSupport") \(self.fileURL.path)")
+            debugPrint(.inbox, "[收件箱] 存储位置=\(resolved.usesAppGroup ? "AppGroup" : "AppSupport") \(self.fileURL.path)")
         }
         load()
     }
@@ -48,7 +48,7 @@ final class InboxStore: ObservableObject {
 
     private func load() {
         items=InboxFile.load(at: fileURL)
-        debugPrint("[收件箱] 读取 \(items.count) 条，文件=\(fileURL.path)")
+        debugPrint(.inbox, "[收件箱] 读取 \(items.count) 条，文件=\(fileURL.path)")
     }
 
     /// 重新从磁盘读一遍（从别的进程/扩展写完之后调它）
@@ -61,7 +61,7 @@ final class InboxStore: ObservableObject {
     @discardableResult
     func add(_ rawText: String, source: InboxSource) -> InboxItem? {
         guard let item=InboxFile.append(rawText: rawText, source: source, to: fileURL) else {
-            debugPrint("[收件箱] 写入失败（磁盘或权限问题），文件=\(fileURL.path)")
+            debugPrint(.inbox, "[收件箱] 写入失败（磁盘或权限问题），文件=\(fileURL.path)")
             return nil
         }
         // 以磁盘为准重新读一遍：扩展可能同时也写了
@@ -104,7 +104,7 @@ final class InboxStore: ObservableObject {
 
     private func persist() {
         if !InboxFile.save(items, to: fileURL) {
-            debugPrint("[收件箱] 保存失败，文件=\(fileURL.path)")
+            debugPrint(.inbox, "[收件箱] 保存失败，文件=\(fileURL.path)")
         }
     }
 

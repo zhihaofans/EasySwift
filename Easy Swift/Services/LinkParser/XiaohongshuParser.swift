@@ -37,13 +37,13 @@ struct XiaohongshuParser: LinkParser {
     func parse(url: URL, progress: LinkParseProgress) async throws -> LinkParseResult {
         // 1. 短链先展开，拿到带 xsec_token 的真实地址
         let pageURL = try await expandIfNeeded(url, progress: progress)
-        debugPrint("[小红书] 展开后: \(pageURL.absoluteString)")
+        debugPrint(.parsing, "[小红书] 展开后: \(pageURL.absoluteString)")
 
         // 2. 抓页面：先用 iOS UA；命中登录墙再换桌面 UA 重试一次（风控是概率性的）
         progress(.requestingPage)
         var response = try await fetch(pageURL, ua: VideoHTTP.UA.iOSSafari)
         if Self.isLoginWall(response) {
-            debugPrint("[小红书] iOS UA 命中登录墙，换桌面 UA 重试")
+            debugPrint(.parsing, "[小红书] iOS UA 命中登录墙，换桌面 UA 重试")
             progress(.retryingWithDesktopUA)
             response = try await fetch(pageURL, ua: VideoHTTP.UA.desktopChrome)
         }
@@ -51,7 +51,7 @@ struct XiaohongshuParser: LinkParser {
             // `/website-login/error` + `error_code=300011` 是**安全限制**（分享链接缺 xsec_token
             // 时就会这样），不是登录过期 —— 错报"登录已过期"会让人白白重新扫码
             if Self.isSecurityBlock(response) {
-                debugPrint("[小红书] 命中安全限制（缺 token），finalURL=\(response.url.absoluteString)")
+                debugPrint(.parsing, "[小红书] 命中安全限制（缺 token），finalURL=\(response.url.absoluteString)")
                 throw LinkParseError.unknown("这条笔记的分享链接不完整（缺少访问参数），请重新复制分享链接")
             }
             // 原本判定为"已登录"却撞墙 → 升级成"过期"，界面上要区分这两种情况
@@ -70,12 +70,12 @@ struct XiaohongshuParser: LinkParser {
 
         // 3. 抠 __INITIAL_STATE__
         guard let state = Self.parseInitialState(from: response.body) else {
-            debugPrint("[小红书] 页面里没有 __INITIAL_STATE__，finalURL=\(response.url.absoluteString)，长度=\(response.body.count)")
+            debugPrint(.parsing, "[小红书] 页面里没有 __INITIAL_STATE__，finalURL=\(response.url.absoluteString)，长度=\(response.body.count)")
             throw LinkParseError.unknown("页面里没有笔记数据（可能被风控拦截），请稍后重试")
         }
         let noteID = Self.noteID(from: response.url) ?? Self.noteID(from: pageURL)
         guard let note = Self.noteObject(in: state, noteID: noteID) else {
-            debugPrint("[小红书] __INITIAL_STATE__ 里找不到笔记对象，noteID=\(noteID ?? "nil")，顶层键=\(state.keys.sorted())")
+            debugPrint(.parsing, "[小红书] __INITIAL_STATE__ 里找不到笔记对象，noteID=\(noteID ?? "nil")，顶层键=\(state.keys.sorted())")
             throw LinkParseError.unknown("笔记数据结构变了，暂时解析不出内容")
         }
 
@@ -114,7 +114,7 @@ struct XiaohongshuParser: LinkParser {
     /// 分享者：先离线解 `shareRedId` 得到 uid；再用 App 的登录态抓一次主页取昵称（尽力而为）
     static func sharer(from finalURL: URL, pageURL: URL) async -> LinkSharer? {
         guard var sharer=SharerResolver.rednote(from: finalURL) ?? SharerResolver.rednote(from: pageURL) else {
-            debugPrint("[小红书] 链接里没有 shareRedId，解不出分享者")
+            debugPrint(.parsing, "[小红书] 链接里没有 shareRedId，解不出分享者")
             return nil
         }
         let cookieHeader=await XiaohongshuSession.shared.cookieHeader()
@@ -126,7 +126,7 @@ struct XiaohongshuParser: LinkParser {
 
     /// 成功日志：没有这一行的话，"解析出几张图"只能靠界面看，日志里断在 GET 那行
     static func logSuccess(_ result: LinkParseResult, kind: String) {
-        debugPrint("[小红书] 解析成功(\(kind)): 标题=\(result.title ?? "nil") 图=\(result.images.count) 动图=\(result.motions.count) 视频=\(result.videos.count) notice=\(result.notice ?? "无")")
+        debugPrint(.parsing, "[小红书] 解析成功(\(kind)): 标题=\(result.title ?? "nil") 图=\(result.images.count) 动图=\(result.motions.count) 视频=\(result.videos.count) notice=\(result.notice ?? "无")")
     }
 
     // MARK: - 请求
@@ -141,7 +141,7 @@ struct XiaohongshuParser: LinkParser {
     private func fetch(_ url: URL, ua: String) async throws -> VideoHTTP.Response {
         // 有登录态就带上：私密笔记、以及部分被风控降级的页面只有带 cookie 才给数据
         let cookies=await XiaohongshuSession.shared.cookieHeader()
-        debugPrint("[小红书] 登录态: \(cookies == nil ? "无" : "有")")
+        debugPrint(.parsing, "[小红书] 登录态: \(cookies == nil ? "无" : "有")")
         do {
             return try await VideoHTTP.get(url, ua: ua, headers: [
                 "Origin": "https://www.xiaohongshu.com",
@@ -260,12 +260,12 @@ struct XiaohongshuParser: LinkParser {
         }
         if let video=note["video"] as? [String: Any] {
             if let image=video["image"] as? [String: Any] {
-                debugPrint("[小红书] 视频封面没找到，video.image 键=\(image.keys.sorted())")
+                debugPrint(.parsing, "[小红书] 视频封面没找到，video.image 键=\(image.keys.sorted())")
             } else {
-                debugPrint("[小红书] 视频封面没找到，video 键=\(video.keys.sorted())")
+                debugPrint(.parsing, "[小红书] 视频封面没找到，video 键=\(video.keys.sorted())")
             }
         } else {
-            debugPrint("[小红书] 视频封面没找到，笔记里没有 video 字段")
+            debugPrint(.parsing, "[小红书] 视频封面没找到，笔记里没有 video 字段")
         }
         return nil
     }

@@ -92,7 +92,7 @@ final class DouyinWebExtractor {
         defer { tearDown() }
 
         let url = URL(string: "https://www.douyin.com/video/\(awemeID)")!
-        debugPrint("[抖音] 隐藏 WebView 加载 \(url.absoluteString)")
+        debugPrint(.parsing, "[抖音] 隐藏 WebView 加载 \(url.absoluteString)")
         webView.load(URLRequest(url: url))
 
         var readyPayload: [String: Any]?
@@ -132,7 +132,7 @@ final class DouyinWebExtractor {
             let snapshot=lastState.map { state in
                 "hook=\(state["hook"] ?? "-") render=\(state["render"] ?? "-") work=\(state["work"] ?? "-") captcha=\(state["captcha"] ?? "-") login=\(state["login"] ?? "-")"
             } ?? "无状态（脚本一直没返回）"
-            debugPrint("[抖音] \(Int(Self.timeout))s 未就绪，finalURL=\(webView.url?.absoluteString ?? "nil") 状态: \(snapshot)")
+            debugPrint(.parsing, "[抖音] \(Int(Self.timeout))s 未就绪，finalURL=\(webView.url?.absoluteString ?? "nil") 状态: \(snapshot)")
             DouyinWebViewCooldown.markFailure()
             throw DouyinExtractError.timeout
         }
@@ -143,11 +143,11 @@ final class DouyinWebExtractor {
         }
 
         let source = payload["src"] as? String ?? "none"
-        debugPrint("[抖音] 取数来源=\(source) 图=\((payload["images"] as? [Any])?.count ?? 0) 动图=\((payload["motions"] as? [Any])?.count ?? 0) 视频=\((payload["videos"] as? [Any])?.count ?? 0)")
+        debugPrint(.parsing, "[抖音] 取数来源=\(source) 图=\((payload["images"] as? [Any])?.count ?? 0) 动图=\((payload["motions"] as? [Any])?.count ?? 0) 视频=\((payload["videos"] as? [Any])?.count ?? 0)")
         guard let result = Self.makeResult(payload) else {
             throw DouyinExtractError.failed("页面里没有可用的图片或视频（来源=\(source)）")
         }
-        debugPrint("[抖音] 解析成功(\(source)): 标题=\(result.title ?? "nil") 图=\(result.images.count) 动图=\(result.motions.count) 视频=\(result.videos.count)")
+        debugPrint(.parsing, "[抖音] 解析成功(\(source)): 标题=\(result.title ?? "nil") 图=\(result.images.count) 动图=\(result.motions.count) 视频=\(result.videos.count)")
         return result
     }
 
@@ -167,10 +167,10 @@ final class DouyinWebExtractor {
         guard !images.isEmpty || !videos.isEmpty else { return nil }
         // 动图与图片靠下标配对，错位了用户看到的"第 N 张是动图"就是错的 —— 打下标便于核对
         if !motions.isEmpty {
-            debugPrint("[抖音] 动图下标(0 起)=\(motions.keys.sorted()) 图片数=\(images.count)")
+            debugPrint(.parsing, "[抖音] 动图下标(0 起)=\(motions.keys.sorted()) 图片数=\(images.count)")
             if let info = payload["motionInfo"] as? [[String: Any]] {
                 for item in info {
-                    debugPrint("[抖音] 动图[下标\(item["i"] ?? "-")] 时长\(item["d"] ?? "-") URL=\(item["u"] ?? "-")")
+                    debugPrint(.parsing, "[抖音] 动图[下标\(item["i"] ?? "-")] 时长\(item["d"] ?? "-") URL=\(item["u"] ?? "-")")
                 }
             }
         }

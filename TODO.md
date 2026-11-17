@@ -3,29 +3,29 @@
 > **只放待办。** 已完成的事按版本记在 [CHANGELOG.md](CHANGELOG.md)；硬约束与验证方式见 [AGENTS.md](AGENTS.md)；架构以源码为准。
 > 新增条目要写清：**改哪里 + 怎么算做完**。不要记录本机绝对路径、账号、Token。
 
-最后更新：2026-11-18 · 待办 12 条
+最后更新：2026-11-18 · 待办 11 条
 
 | 分区 | 含义 | 条数 |
 |---|---|---|
-| [P1 可直接做](#p1--可直接做改法明确不牵涉决策) | 改法明确，不牵涉决策 | 7 |
+| [P1 可直接做](#p1--可直接做改法明确不牵涉决策) | 改法明确，不牵涉决策 | 6 |
 | [P2 等条件](#p2--等条件缺设备缺权限或上架才需要) | 缺设备、缺权限、或上架才需要 | 5 |
 
 ---
 
 ## P1 · 可直接做（改法明确，不牵涉决策）
 
-- [ ] **导出完整日志**（设置页 → 导出日志 → 分享文件）
-      - 现状：`LogExporter.export(subsystem:last:)` 只能读 **OSLogStore 的有限窗口**，且 debug 级 os_log 默认不落盘、
-        `isPublic: false` 的内容是 `<private>` —— **拿不到"从启动到现在"的完整日志**
-      - 做法：新增 `FileLogBackend`（实现 `LogBackend`）写 `Application Support/Logs/app-YYYYMMDD.log`，
-        按天滚动 + 单文件上限约 5MB + 保留 7 天；DEBUG 三写（Console + OSLog + File），RELEASE 写 File + OSLog
-        —— **文件才是导出用的真相源**
-      - 导出：最近 N 天拼成一个 txt（默认全部，上限 7 天），文件头附 App 版本 / 构建号 / 系统版本 / 机型 / 导出时间；
-        设置页入口 + 系统分享
-      - 脱敏：导出前过滤 `web_session` / `a1` / `token` / `cookie` 的值（正则），文件头注明已脱敏
-      - **算完**：冷启动 → 做几次操作 → 导出 → 文件含启动到导出全过程；杀进程重开仍追加；超上限按天裁剪；能分享出去
-- [ ] **日志分 category** —— 现在只有一个 `app` category。按功能拆 `parsing` / `inbox` / `ui`（参考 OMF 的
-      `AppLog.general` / `.imports`），导出时可按分类过滤。**算完**：`log show --predicate 'category == "parsing"'` 只看解析日志
+- [ ] **SwiftUI 测试页做成"OMF 组件样例集"** —— 现在 [UITestView.swift](<Easy Swift/Views/UITestView.swift>) 只有 12 个基础控件
+      （按钮/开关/滑块/步进/分段/输入框/日期/颜色/进度/链接/图标/标签）。把 OhMyFile 里用到、而我们没示范过的
+      原生 SwiftUI 用法逐条搬进来做成可交互样例，作为以后写页面的活参考：
+      1. 布局与容器：`Grid` / `LazyVGrid` / `LazyHGrid` / `ViewThatFits` / `containerRelativeFrame` / `safeAreaInset`
+      2. 列表与搜索：`.searchable` / `.listStyle` 各档 / `.swipeActions` / `.refreshable` / `.scrollPosition`
+      3. 弹层：`.sheet` + `.presentationDetents` / `.fullScreenCover` / `.popover` / `.confirmationDialog`
+      4. 文件与拖放：`.fileImporter` / `.fileExporter`（安全作用域）/ `.draggable` + `.dropDestination`
+      5. 交互与反馈：`.contextMenu` / `.sensoryFeedback` / `.symbolEffect` / `.contentTransition`
+      6. 文本与隐私：`.textSelection` / `.privacySensitive` / `.redacted` / Dynamic Type 档位对照
+      7. 表格（iPad/macOS）：`Table` 排序与列宽
+      **算完**：每类有一个可点/可拖的样例 + 一段说明文字；iPhone（紧凑）与 iPad（常规宽度）都渲染正常，无裁切
+
 - [ ] **单元测试 target（Swift Testing）** —— `SharerResolver` 解码、`InboxClassifier` 分类、`LinkHistoryStore` 去重/裁剪、
       `PhotoLibrarySaver.accessError` 都是纯函数，把这几轮现写的 harness 断言直接搬成 `@Test` / `#expect`
       （OMF 有 24 个测试文件可照结构）。**算完**：⌘U 能跑并覆盖上述 4 处

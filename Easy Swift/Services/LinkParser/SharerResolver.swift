@@ -91,21 +91,21 @@ enum SharerResolver {
             ], cookies: cookieHeader)
             let path=response.url.path.lowercased()
             if path.contains("login") || path.contains("website-login") {
-                debugPrint("[分享者] 小红书取昵称撞登录墙/风控，回落显示 ID")
+                debugPrint(.parsing, "[分享者] 小红书取昵称撞登录墙/风控，回落显示 ID")
                 return nil
             }
             guard let state=XiaohongshuParser.parseInitialState(from: response.body) else {
-                debugPrint("[分享者] 小红书主页没有 __INITIAL_STATE__，回落显示 ID")
+                debugPrint(.parsing, "[分享者] 小红书主页没有 __INITIAL_STATE__，回落显示 ID")
                 return nil
             }
             if let nickname=rednoteNickname(fromState: state) {
-                debugPrint("[分享者] 小红书昵称取到（\(nickname.count) 字）")
+                debugPrint(.parsing, "[分享者] 小红书昵称取到（\(nickname.count) 字）")
                 return nickname
             }
-            debugPrint("[分享者] 小红书主页里没找到 nickname，回落显示 ID")
+            debugPrint(.parsing, "[分享者] 小红书主页里没找到 nickname，回落显示 ID")
             return nil
         } catch {
-            debugPrint("[分享者] 小红书取昵称失败: \(error.localizedDescription)")
+            debugPrint(.parsing, "[分享者] 小红书取昵称失败: \(error.localizedDescription)")
             return nil
         }
     }
@@ -118,7 +118,7 @@ enum SharerResolver {
         guard let components=URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
         guard let token=components.queryItems?.first(where: { $0.name == "shareRedId" })?.value else { return nil }
         guard let uid=rednoteAccountID(fromShareRedID: token) else {
-            debugPrint("[分享者] 小红书 shareRedId 解码失败，长度=\(token.count)")
+            debugPrint(.parsing, "[分享者] 小红书 shareRedId 解码失败，长度=\(token.count)")
             return nil
         }
         return LinkSharer(platform: .rednote,
@@ -246,15 +246,15 @@ enum SharerResolver {
                   let payload=(try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
                   let info=payload["data"] as? [String: Any]
             else {
-                debugPrint("[分享者] 抖音 webcast 返回结构不认识，HTTP \(response.status)")
+                debugPrint(.parsing, "[分享者] 抖音 webcast 返回结构不认识，HTTP \(response.status)")
                 return (nil, nil)
             }
             let nickname=(info["nickname"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
             let secUID=info["sec_uid"] as? String
-            debugPrint("[分享者] 抖音 webcast 查询成功：nickname=\(nickname?.isEmpty == false ? "有" : "无") sec_uid=\(secUID?.isEmpty == false ? "有" : "无")")
+            debugPrint(.parsing, "[分享者] 抖音 webcast 查询成功：nickname=\(nickname?.isEmpty == false ? "有" : "无") sec_uid=\(secUID?.isEmpty == false ? "有" : "无")")
             return (nickname?.isEmpty == false ? nickname : nil, (secUID?.isEmpty == false) ? secUID : nil)
         } catch {
-            debugPrint("[分享者] 抖音 webcast 查询失败: \(error.localizedDescription)")
+            debugPrint(.parsing, "[分享者] 抖音 webcast 查询失败: \(error.localizedDescription)")
             return (nil, nil)
         }
     }

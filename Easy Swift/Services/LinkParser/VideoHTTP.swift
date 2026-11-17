@@ -65,7 +65,7 @@ enum VideoHTTP {
                 ?? String(data: data, encoding: .isoLatin1)
                 ?? ""
             let finalURL = http.url ?? url
-            debugPrint("[VideoHTTP] GET \(url.absoluteString) -> \(finalURL.absoluteString) [\(http.statusCode)] \(data.count) bytes")
+            debugPrint(.parsing, "[VideoHTTP] GET \(url.absoluteString) -> \(finalURL.absoluteString) [\(http.statusCode)] \(data.count) bytes")
             return Response(url: finalURL,
                             status: http.statusCode,
                             body: body,
@@ -73,7 +73,7 @@ enum VideoHTTP {
         } catch let error as LinkParseError {
             throw error
         } catch {
-            debugPrint("[VideoHTTP] GET 失败 \(url.absoluteString): \(error.localizedDescription)")
+            debugPrint(.parsing, "[VideoHTTP] GET 失败 \(url.absoluteString): \(error.localizedDescription)")
             throw LinkParseError.network
         }
     }
@@ -101,7 +101,7 @@ enum VideoHTTP {
             let (_, response) = try await URLSession.shared.data(for: request)
             return (response as? HTTPURLResponse)?.statusCode
         } catch {
-            debugPrint("[VideoHTTP] HEAD 未拿到状态 \(url.absoluteString): \(error.localizedDescription)")
+            debugPrint(.parsing, "[VideoHTTP] HEAD 未拿到状态 \(url.absoluteString): \(error.localizedDescription)")
             return nil
         }
     }
@@ -134,7 +134,7 @@ enum VideoHTTP {
             do {
                 (_, response) = try await session.data(for: request)
             } catch {
-                debugPrint("[VideoHTTP] 短链展开失败 \(current.absoluteString): \(error.localizedDescription)")
+                debugPrint(.parsing, "[VideoHTTP] 短链展开失败 \(current.absoluteString): \(error.localizedDescription)")
                 throw LinkParseError.network
             }
             guard let http = response as? HTTPURLResponse else { return current }
@@ -145,10 +145,10 @@ enum VideoHTTP {
             else {
                 return http.url ?? current
             }
-            debugPrint("[VideoHTTP] 短链第 \(hop + 1) 跳: \(current.absoluteString) -> \(next.absoluteString)")
+            debugPrint(.parsing, "[VideoHTTP] 短链第 \(hop + 1) 跳: \(current.absoluteString) -> \(next.absoluteString)")
             current = next
         }
-        debugPrint("[VideoHTTP] 短链跳数超过 \(maxHops)，停在: \(current.absoluteString)")
+        debugPrint(.parsing, "[VideoHTTP] 短链跳数超过 \(maxHops)，停在: \(current.absoluteString)")
         return current
     }
 

@@ -137,14 +137,14 @@ final class XhsQRLoginService: NSObject, ObservableObject {
         if snapshot.src != lastQRSource, !snapshot.src.isEmpty {
             lastQRSource=snapshot.src
             qrImage=decodeDataURL(snapshot.src)
-            debugPrint("[小红书扫码] 拿到二维码，长度=\(snapshot.src.count)，解出来的图=\(qrImage == nil ? "nil" : "ok")")
+            debugPrint(.parsing, "[小红书扫码] 拿到二维码，长度=\(snapshot.src.count)，解出来的图=\(qrImage == nil ? "nil" : "ok")")
             if phase == .loading { phase = .waiting }
         }
 
         let text=snapshot.status
         if text != lastStatusText {
             lastStatusText=text
-            if !text.isEmpty { debugPrint("[小红书扫码] 页面状态: \(text)") }
+            if !text.isEmpty { debugPrint(.parsing, "[小红书扫码] 页面状态: \(text)") }
         }
         // 页面没给文案时用关键词兜底；给了文案且含"确认"也算
         let looksScanned=Self.scannedKeywords.contains { text.contains($0) }
@@ -153,7 +153,7 @@ final class XhsQRLoginService: NSObject, ObservableObject {
         }
         // 页面离开登录页 = 网页那边认为登录完成了，交给 cookie 轮询去确认
         if !snapshot.url.contains("/login"), phase != .verifying {
-            debugPrint("[小红书扫码] 页面已离开登录页: \(snapshot.url)")
+            debugPrint(.parsing, "[小红书扫码] 页面已离开登录页: \(snapshot.url)")
         }
     }
 
@@ -185,7 +185,7 @@ final class XhsQRLoginService: NSObject, ObservableObject {
         if cookies.count != lastCookieCount {
             lastCookieCount=cookies.count
             let names=cookies.compactMap { $0.domain.contains("xiaohongshu") ? $0.name : nil }.sorted()
-            debugPrint("[小红书扫码] 当前 cookie 数=\(cookies.count) 小红书域=\(names)")
+            debugPrint(.parsing, "[小红书扫码] 当前 cookie 数=\(cookies.count) 小红书域=\(names)")
         }
         guard let session=cookies.first(where: { $0.name == "web_session" }), !session.value.isEmpty else { return }
         // 游客态也会种 web_session（03 开头）：只有 04 开头才是真登录
@@ -193,7 +193,7 @@ final class XhsQRLoginService: NSObject, ObservableObject {
         if prefix != lastSessionPrefix {
             lastSessionPrefix=prefix
             // 只打前缀，绝不打印整串（它是凭据）
-            debugPrint("[小红书扫码] 出现 web_session，前缀=\(prefix)（04=真登录，03=游客态）")
+            debugPrint(.parsing, "[小红书扫码] 出现 web_session，前缀=\(prefix)（04=真登录，03=游客态）")
         }
         guard session.value.hasPrefix("04") else { return }
         guard !hasSeenSession else { return }
@@ -203,17 +203,17 @@ final class XhsQRLoginService: NSObject, ObservableObject {
         defer { isVerifying=false }
 
         let header=XiaohongshuSession.header(from: cookies.filter { XiaohongshuSession.isRelevant($0) }) ?? ""
-        debugPrint("[小红书扫码] 拿到 web_session（04 开头），开始行为探测")
+        debugPrint(.parsing, "[小红书扫码] 拿到 web_session（04 开头），开始行为探测")
         guard await XiaohongshuSession.shared.validate(cookieHeader: header) else {
             // 探测没过：可能是平台抖动，也可能是游客态假象。把 hasSeenSession 放开让下一轮再试
-            debugPrint("[小红书扫码] 探测未通过，继续等待")
+            debugPrint(.parsing, "[小红书扫码] 探测未通过，继续等待")
             hasSeenSession=false
             phase = .scanned
             return
         }
         await XiaohongshuSession.shared.save(cookies: cookies)
         await XiaohongshuSession.shared.refreshState()
-        debugPrint("[小红书扫码] 登录成功")
+        debugPrint(.parsing, "[小红书扫码] 登录成功")
         phase = .success
         pollTask?.cancel()
         pollTask=nil
@@ -237,7 +237,7 @@ final class XhsQRLoginService: NSObject, ObservableObject {
         guard let comma=source.firstIndex(of: ",") else { return nil }
         let base64=String(source[source.index(after: comma)...])
         guard let data=Data(base64Encoded: base64) else {
-            debugPrint("[小红书扫码] base64 解码失败")
+            debugPrint(.parsing, "[小红书扫码] base64 解码失败")
             return nil
         }
         return PlatformImage(data: data)
@@ -249,7 +249,7 @@ final class XhsQRLoginService: NSObject, ObservableObject {
 extension XhsQRLoginService: WKNavigationDelegate {
     nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         Task { @MainActor in
-            debugPrint("[小红书扫码] 页面加载完成: \(webView.url?.absoluteString.prefix(80) ?? "nil")")
+            debugPrint(.parsing, "[小红书扫码] 页面加载完成: \(webView.url?.absoluteString.prefix(80) ?? "nil")")
         }
     }
 
