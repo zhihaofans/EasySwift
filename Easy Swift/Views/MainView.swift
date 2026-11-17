@@ -99,9 +99,8 @@ struct MainView: View {
             List {
                 ForEach(HomeFeature.mainFeatures) { feature in
                     NavigationLink(value: feature) {
-                        Label(feature.title, systemImage: feature.systemImage)
+                        featureRow(feature)
                     }
-                    .badge(feature == .inbox ? inbox.unhandledCount : 0)
                 }
             }
             .navigationTitle(AppUtil().getAppName())
@@ -126,8 +125,7 @@ struct MainView: View {
         NavigationSplitView {
             List(selection: $selectedFeature) {
                 ForEach(HomeFeature.mainFeatures) { feature in
-                    Label(feature.title, systemImage: feature.systemImage)
-                        .badge(feature == .inbox ? inbox.unhandledCount : 0)
+                    featureRow(feature)
                         .tag(feature)
                 }
                 Section {
@@ -142,6 +140,27 @@ struct MainView: View {
                 destination(feature)
             } else {
                 ContentUnavailableView("选择一个功能", systemImage: "sidebar.left")
+            }
+        }
+    }
+
+    /// 首页一行：图标 + 名称 +（收件箱的）未处理条数
+    ///
+    /// 条数不再用 `.badge`：iOS 26/27 会把它排在 disclosure chevron **右边**（实测 5 跑到箭头后面），
+    /// 那是系统排版，改不动；自己画在行内容里，位置就固定在 chevron 左侧。
+    @ViewBuilder
+    private func featureRow(_ feature: HomeFeature) -> some View {
+        HStack(spacing: 8) {
+            Label(feature.title, systemImage: feature.systemImage)
+            if feature == .inbox, inbox.unhandledCount > 0 {
+                Spacer(minLength: 4)
+                Text("\(inbox.unhandledCount)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 1)
+                    .background(.quaternary, in: Capsule())
+                    .accessibilityLabel("未处理 \(inbox.unhandledCount) 条")
             }
         }
     }
