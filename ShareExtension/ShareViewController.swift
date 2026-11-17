@@ -18,6 +18,7 @@ import UniformTypeIdentifiers
 final class ShareViewController: UIViewController {
     private let titleLabel=UILabel()
     private let spinner=UIActivityIndicatorView(style: .medium)
+    private let openButton=UIButton(type: .system)
     private let doneButton=UIButton(type: .system)
     private var didFinish=false
 
@@ -33,12 +34,23 @@ final class ShareViewController: UIViewController {
 
         spinner.startAnimating()
 
+        openButton.setTitle("打开 Easy Swift", for: .normal)
+        openButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
+        openButton.addTarget(self, action: #selector(tapOpen), for: .touchUpInside)
+        openButton.isHidden=true
+        openButton.setContentHuggingPriority(.required, for: .horizontal)
+
         doneButton.setTitle("完成", for: .normal)
         doneButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
         doneButton.addTarget(self, action: #selector(tapDone), for: .touchUpInside)
         doneButton.isHidden=true
 
-        let stack=UIStackView(arrangedSubviews: [spinner, titleLabel, doneButton])
+        let buttons=UIStackView(arrangedSubviews: [openButton, doneButton])
+        buttons.axis = .horizontal
+        buttons.spacing=20
+        buttons.alignment = .center
+
+        let stack=UIStackView(arrangedSubviews: [spinner, titleLabel, buttons])
         stack.axis = .vertical
         stack.alignment = .center
         stack.spacing=12
@@ -74,10 +86,11 @@ final class ShareViewController: UIViewController {
         }
         spinner.stopAnimating()
         titleLabel.text=message
+        openButton.isHidden=false
         doneButton.isHidden=false
 
-        // 兜底：1.5 秒没点就自己关，保留"分享完就完事"的零点击体验
-        try? await Task.sleep(for: .milliseconds(1500))
+        // 兜底：2.5 秒没点就自己关（比之前多 1 秒，给「打开 Easy Swift」留点击时间）
+        try? await Task.sleep(for: .milliseconds(2500))
         finish()
     }
 
@@ -87,11 +100,40 @@ final class ShareViewController: UIViewController {
         finish()
     }
 
-    // 说明：分享扩展**无法**主动打开宿主 App。
-    // 实测（iOS 27.2，2026-10-28）：
-    //   · extensionContext.open(_:)        → 回调 false，不跳转
-    //   · responder 链上 perform openURL:  → 调用了，但系统忽略，面板关闭后回到发起分享的 App
-    // 这两种是社区里仅有的两条路，都试过了。所以这里只给「完成」，不再放一个点了没反应的按钮。
+    /// 打开宿主 App。
+    ///
+    /// 之前判定"做不到"是我实现错了，对照 OhMyFile 的实现后修正（2026-11-18）：
+    ///   1. 必须**把 responder 强转成 `UIApplication`** 再调 `open(_:options:completionHandler:)`；
+    ///      我原先用 `responds(to: "openURL:") + perform`，命中的可能不是 UIApplication，
+    ///      看着执行了其实被忽略。
+    ///   2. `completeRequest` 必须**延后 0.6 秒**，紧跟 open 会把这请求一起取消掉。
+    ///   3. `extensionContext.open` 只作兜底（对 share extension 常返回 false）。
+    @objc private func tapOpen() {
+        var components=URLComponents()
+        components.scheme="easyswift"
+        components.host="inbox"
+        guard let url=components.url else { finish(); return }
+
+        if !openViaResponderChain(url) {
+            extensionContext?.open(url, completionHandler: nil)
+        }
+        // 给系统时间处理打开请求，再结束扩展；否则唤起会被取消
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            self?.finish()
+        }
+    }
+
+    private func openViaResponderChain(_ url: URL) -> Bool {
+        var responder: UIResponder?=self
+        while let current=responder {
+            if let application=current as? UIApplication {
+                application.open(url, options: [:], completionHandler: nil)
+                return true
+            }
+            responder=current.next
+        }
+        return false
+    }
 
     private func finish() {
         guard !didFinish else { return }
