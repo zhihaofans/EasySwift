@@ -11,21 +11,12 @@
       }
     },
     {
-      "identity" : "swift-log",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-log",
-      "state" : {
-        "revision" : "3ffafb9722d5d918c614feb496c8789a3b59d222",
-        "version" : "1.15.0"
-      }
-    },
-    {
       "identity" : "swiftutils",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/zhihaofans/SwiftUtils",
       "state" : {
-        "revision" : "bba8c3c091967e9a6e0de4eef68da9d110e0fe1d",
-        "version" : "0.0.28"
+        "revision" : "2f836758b670e8cb4f5eae590d092440403d5c4e",
+        "version" : "0.0.33"
       }
     }
   ],

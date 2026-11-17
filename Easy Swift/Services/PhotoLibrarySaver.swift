@@ -20,7 +20,7 @@ import UniformTypeIdentifiers
 enum PhotoLibrarySaver {
     /// 只申请"写入"权限：我们不需要读用户的相册。
     ///
-    /// 状态判断收敛到 SwiftUtils 的 `PermissionUtil`（0.0.28 起）：它把「没问过 / 用户拒绝 /
+    /// 状态判断收敛到 SwiftUtils 的 `PermissionUtil`（0.0.33 起会单独返回 `.misconfigured`）：它把「没问过 / 用户拒绝 /
     /// 系统限制 / 平台不支持 / Info.plist 缺用法说明」分成不同状态。这里只做
     /// 「状态 → 用户看得懂的错误」这一步，映射写成纯函数，便于单独验。
     ///
@@ -52,6 +52,9 @@ enum PhotoLibrarySaver {
             return .permissionDenied
         case .restricted:
             return .permissionRestricted
+        case .misconfigured:
+            // Info.plist 缺用法说明：带缺键调系统 API 会被直接终止进程，这里必须拦住并说清楚是配置问题
+            return .permissionMisconfigured
         case .unavailable, .unknown:
             return .libraryUnavailable
         }

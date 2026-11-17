@@ -11,6 +11,20 @@
 
 ---
 
+## P1 · 可直接做（SwiftUtils 0.0.33 带来的替换）
+
+- [ ] **日志后端切 OSLog** —— `DebugLog` 现在走 stderr + 每次 `fflush(stdout)`（真机块缓冲踩过坑）。
+      0.0.33 提供 `LogUtil.configureLogging(backend: OSLogBackend())` 与 `LogExporter`（按 subsystem 导出最近 N 秒）。
+      **算完**：真机日志能在 Console.app 里按 subsystem 过滤，`fflush` 可去掉
+- [ ] **图片缩略图加缓存 + EXIF 归一** —— 历史页/解析页缩略图每次滚动都重新下载（`URLSession.shared.data` 直连），
+      且 `ImageUtil` 已提供"按 EXIF 方向转正、顺带清掉旧像素尺寸"的缩略图 API。**算完**：同一 URL 二次进入不重复下载
+- [ ] **时间显示换 `RelativeTimeFormatter`** —— 收件箱/历史现在用 `.formatted(date:time:)`；
+      库里有本地化相对时间（未来时间不会显示成"刚刚"）。**算完**：列表显示"3 分钟前"且有单测断言边界
+- [ ] **超时/重试收口** —— `DouyinWebExtractor` 手写 deadline、`VideoHTTP` 各自设 timeout、
+      解析器里零散的重试逻辑 → 统一用 `withTimeout` / `RetryPolicy`。**算完**：超时路径有可复现用例
+- [ ] **文件写入换 `FileUtil`** —— `InboxShared` 自己写原子写/唯一名，`MediaDownloader` 手拼临时文件名；
+      0.0.33 提供 `FileUtil` 原子读写 + `createUniqueFile`（内核级判重）。**算完**：并发保存不互相覆盖
+
 ## P2 · 等条件
 
 - [ ] **iPhone Duo 适配** —— 现状：App 在 Duo 上**以手机宽度窗口运行**，内容挤左、右侧大片留白，工具栏被压中间。

@@ -2,7 +2,7 @@
 //  DebugLog.swift
 //  Easy Swift
 //
-//  全局调试输出：统一走 SwiftUtils 的 LogUtil（swift-log）。
+//  全局调试输出：统一走 SwiftUtils 的 LogUtil（0.0.33 起是库内可插拔后端，不再依赖 swift-log）。
 //  SwiftUtils 的 logger 在 Debug 构建为 .debug 级别、Release 为 .info 级别，
 //  debug 级别日志天然只在 Debug 输出；再加 #if DEBUG 双保险。
 //

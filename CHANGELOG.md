@@ -5,6 +5,19 @@
 
 ---
 
+## [Unreleased]
+
+**变更**
+
+- 升级 SwiftUtils `0.0.28 → 0.0.33`：移除 swift-log 依赖（`Package.resolved` 里已无 `swift-log`），
+  工程回到只用 SwiftUtils + CrashKit 两个包
+- 处理两个破坏性变更：
+  - `PermissionUtil` 新增 `.misconfigured`（Info.plist 缺 usage key）→ `MediaSaveError` 新增
+    `permissionMisconfigured`，文案指向"配置缺失"而不是让用户去设置；批量保存同样整批停下
+  - swift-log 移除 → 项目只用 `LogUtil.d`，无 `Logger` / `metadata` 用法，无需改调用点
+
+**验证**：三档构建通过；权限映射断言 10 条（8 个状态 + isPermissionProblem + 文案）全过
+
 ## 0.5.3 (12) · 2026-11-05
 
 **新增**

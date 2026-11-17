@@ -582,7 +582,7 @@
 			repositoryURL = "https://github.com/zhihaofans/SwiftUtils";
 			requirement = {
 				kind = exactVersion;
-				version = 0.0.28;
+				version = 0.0.33;
 			};
 		};
 		AA00C1A00000000000000003 /* XCRemoteSwiftPackageReference "CrashKit" */ = {
