@@ -55,48 +55,6 @@ enum MediaPreviewItem: Hashable, Identifiable {
     }
 }
 
-// MARK: - 图片缓存
-
-/// 列表缩略图与全屏预览共用一份缓存，避免"点开又下一次"
-@MainActor
-final class MediaImageCache {
-    static let shared = MediaImageCache()
-
-    private let cache = NSCache<NSURL, PlatformImage>()
-
-    private init() {
-        cache.countLimit = 60
-    }
-
-    func cached(_ url: URL) -> PlatformImage? {
-        return cache.object(forKey: url as NSURL)
-    }
-
-    func store(_ image: PlatformImage, for url: URL) {
-        cache.setObject(image, forKey: url as NSURL)
-    }
-
-    /// 带防盗链头加载；失败返回 nil，不抛错（展示层只关心能不能显示）
-    func load(_ url: URL) async -> PlatformImage? {
-        if let cached = cached(url) { return cached }
-
-        var request = URLRequest(url: url)
-        for (key, value) in MediaPreviewItem.headers(for: url) {
-            request.setValue(value, forHTTPHeaderField: key)
-        }
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else { return nil }
-            guard let image = PlatformImage(data: data) else { return nil }
-            store(image, for: url)
-            return image
-        } catch {
-            debugPrint("[预览] 图片加载失败 \(url.absoluteString.prefix(80)): \(error.localizedDescription)")
-            return nil
-        }
-    }
-}
-
 // MARK: - 通用入口
 
 /// 一次预览请求。任何模块都可以攒一组条目丢给 `.mediaPreview(_:)`
@@ -292,15 +250,17 @@ private struct PreviewImagePage: View {
     }
 
     private func load() async {
-        if let cached = MediaImageCache.shared.cached(url) {
-            image = cached
-            return
-        }
         image = nil
         failed = false
-        let loaded = await MediaImageCache.shared.load(url)
-        image = loaded
-        failed = (loaded == nil)
+        do {
+            // 预览给 3000：全屏也清晰；仍走缩略图管线，不会把原图整张解码
+            let referer=MediaPreviewItem.headers(for: url)["Referer"]
+            let cached=try await RemoteImageCache.shared.image(for: url, referer: referer, maxPixelSize: 3000)
+            image = cached.image
+        } catch {
+            debugPrint("[预览] 图片加载失败 \(url.absoluteString.prefix(80)): \(error.localizedDescription)")
+            failed = true
+        }
     }
 }
 

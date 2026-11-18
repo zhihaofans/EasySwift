@@ -9,6 +9,14 @@
 
 **新增**
 
+- **远程图片缓存**（`RemoteImageCache`）：内存 + 磁盘 + 并发合并，滚动不重复下载；
+  解码走 `ImageUtil.downsample`（ImageIO 直接出缩略图，不解原图），**按 EXIF 方向转正**并缩到目标像素
+  - 解析页缩略图 1200px、历史列表 200px、全屏预览 3000px，同图不同尺寸分开缓存
+  - **缓存键规范化**：抖音 CDN 的图片地址每次解析都会换时效签名（`x-expires` / `x-signature`），
+    连**子域名都在换**（实测同图在 `p3-pc-sign` / `p9-sign` / `p11-sign` 之间轮换），
+    所以 CDN 图只按 `path` 做键；其它站点只剥易变参数。真机日志：命中内存 76 / 网络下载 32
+  - 落盘为重编码 JPEG（方向归一为 1、体积更小），断网也能显示已看过的图；真机已落盘 133 个文件
+  - 替换掉三处各自 `URLSession` 拉原图的实现（含删除预览页私有缓存）
 - **SwiftUI 组件样例集**：「Swift UI测试」页改成索引 + 8 类可交互样例（基础控件 / 布局与容器 /
   列表与搜索 / 弹层 / 文件与拖放 / 交互与反馈 / 文本与隐私 / 表格 Table），索引可搜索；
   每张卡片写清 API 用途与平台差异（如 macOS 无 `fullScreenCover`、无 `grouped` 列表样式）
@@ -16,7 +24,7 @@
   内容含 App 版本 / 构建号 / 系统版本 / 导出时间，**导出前过滤 web_session / a1 / token / cookie 等凭据值**
   （`***` 替换，键名保留），文件头注明已脱敏
 - **文件日志后端**：`Application Support/Logs/app-YYYYMMDD.log`，按天滚动、单文件 5MB 上限（超出轮转为 `.log.1`）、保留 7 天。
-  采用它是因为 `LogExporter` 只能读 OSLogStore 的有限窗口、debug 级默认不落盘，导不出"从启动到现在"的完整日志
+  采用它是因为 `LogExporter` 只能读 OSLogStore 的有限窗口、debug 级默认不落盘，导不出「从启动到现在」的完整日志
 - **日志分类**：`app` / `parsing` / `inbox` / `ui`，通过 `debugPrint(.parsing, …)` 标注（共归类 58 处调用）；
   OSLog 按 category 建 `Logger`，导出文本里带 `[分类]` 列
 
@@ -25,27 +33,25 @@
 - 日志后端切换：App 启动时配置 `OSLogBackend`（subsystem = bundle id），DEBUG 为
   「控制台 + 系统日志」双写、RELEASE 只写系统日志；去掉 `debugPrint` 里对抗 stdout 缓冲的 `fflush`
   （实测：只切 OSLog 后 `devicectl --console` 里应用日志全消失，所以 DEBUG 保留控制台通道）
+- 升级 SwiftUtils `0.0.28 → 0.0.33`：移除 swift-log 依赖（`Package.resolved` 里已无 `swift-log`），
+  工程回到只用 SwiftUtils + CrashKit 两个包
+  - `PermissionUtil` 新增 `.misconfigured`（Info.plist 缺 usage key）→ `MediaSaveError` 新增
+    `permissionMisconfigured`，文案指向「配置缺失」而不是让用户去设置；批量保存同样整批停下
+  - swift-log 移除 → 项目只用 `LogUtil.d`，无 `Logger` / `metadata` 用法，无需改调用点
 
 **修复**
 
-- 分享扩展新增「打开 Easy Swift」按钮：按 OhMyFile 的做法，responder 链上强转 `UIApplication` 调
-  `open(_:options:)`，并延后 0.6 秒再 `completeRequest`（此前 fail 的原因：`responds(to:)+perform`
+- 分享扩展能拉起主 App：按 OhMyFile 的做法，responder 链上强转 `UIApplication` 调
+  `open(_:options:)`，并延后 0.6 秒再 `completeRequest`（此前失败的原因：`responds(to:)+perform`
   命中的不是 UIApplication；complete 太早会把唤起取消）。
   **真机验证通过**：从其他 App 分享 → 点「打开 Easy Swift」→ 直接跳进 App。
   注意这是**非稳定 API**（技能手册也标了），系统升级后要复测
 - 首页收件箱条数跑到 chevron 右边：`.badge` 在 iOS 26/27 被系统排在 disclosure 指示器外侧，
   改为把条数画进行内容（胶囊，固定在 chevron 左侧），双栏侧栏同样适用
 
-**变更**
-
-- 升级 SwiftUtils `0.0.28 → 0.0.33`：移除 swift-log 依赖（`Package.resolved` 里已无 `swift-log`），
-  工程回到只用 SwiftUtils + CrashKit 两个包
-- 处理两个破坏性变更：
-  - `PermissionUtil` 新增 `.misconfigured`（Info.plist 缺 usage key）→ `MediaSaveError` 新增
-    `permissionMisconfigured`，文案指向"配置缺失"而不是让用户去设置；批量保存同样整批停下
-  - swift-log 移除 → 项目只用 `LogUtil.d`，无 `Logger` / `metadata` 用法，无需改调用点
-
-**验证**：三档构建通过；权限映射断言 10 条（8 个状态 + isPermissionProblem + 文案）全过
+**验证**：三档构建通过；权限映射 10 条 / 日志导出与脱敏 18 条 / 日志轮转 3 条 /
+历史存取 13 条 / 图片缓存与 EXIF 14 条 / 缓存键规范化 10 条断言全过；真机验证分享扩展唤起、
+收件箱条数位置、图片缓存落盘
 
 ## 0.5.3 (12) · 2026-11-05
 

@@ -19,6 +19,17 @@ public typealias PlatformImage = NSImage
 public typealias PlatformView = NSView
 #endif
 
+extension PlatformImage {
+    /// 从 CGImage 构造（ImageIO 出的缩略图已经是转正后的像素，方向标记置为 up）
+    static func from(cgImage: CGImage) -> PlatformImage {
+        #if os(macOS)
+        PlatformImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        #else
+        PlatformImage(cgImage: cgImage, scale: 1, orientation: .up)
+        #endif
+    }
+}
+
 #if canImport(SwiftUI)
 import SwiftUI
 

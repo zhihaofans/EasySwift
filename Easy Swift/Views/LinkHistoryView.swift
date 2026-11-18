@@ -126,7 +126,7 @@ struct LinkHistoryView: View {
     }
 }
 
-/// 小缩略图（只做列表用，独立于解析页那个带状态提示的 RemoteImageView）
+/// 小缩略图（只做列表用）：走共享缓存，滚动时不重复下载
 private struct RemoteImageThumb: View {
     let url: URL
     let referer: String
@@ -143,20 +143,12 @@ private struct RemoteImageThumb: View {
             }
         }
         .task(id: url) {
-            guard let data=await Self.fetch(url: url, referer: referer) else { return }
-            if let loaded=PlatformImage(data: data) { image=loaded }
+            guard let cached=try? await RemoteImageCache.shared.image(for: url,
+                                                                     referer: referer.isEmpty ? nil : referer,
+                                                                     maxPixelSize: 200)
+            else { return }
+            image=cached.image
         }
-    }
-
-    private static func fetch(url: URL, referer: String) async -> Data? {
-        var request=URLRequest(url: url)
-        if !referer.isEmpty { request.setValue(referer, forHTTPHeaderField: "Referer") }
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-                         forHTTPHeaderField: "User-Agent")
-        guard let (data, response)=try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode ?? 0 < 400
-        else { return nil }
-        return data
     }
 }
 

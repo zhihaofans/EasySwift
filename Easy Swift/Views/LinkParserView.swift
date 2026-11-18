@@ -865,32 +865,16 @@ private struct RemoteImageView: View {
     private func load() async {
         image=nil
         state = .loading
-        var request=URLRequest(url: url)
-        request.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            forHTTPHeaderField: "User-Agent"
-        )
-        if referer.isNotEmpty {
-            request.setValue(referer, forHTTPHeaderField: "Referer")
-        }
         do {
-            let (data, response)=try await URLSession.shared.data(for: request)
-            guard let http=response as? HTTPURLResponse else {
-                state = .failed
-                return
-            }
-            guard (200..<300).contains(http.statusCode) else {
-                state = .failed
-                return
-            }
-            // 2xx 但无法解码为图片 → 判定为"非图片"内容
-            #if os(macOS)
-            image=NSImage(data: data)
-            #else
-            image=UIImage(data: data)
-            #endif
-            if image == nil {
+            // 目标像素 1200：列表里够清晰，也避免整张原图解码进内存；EXIF 方向由 ImageUtil 转正
+            let cached=try await RemoteImageCache.shared.image(for: url, referer: referer, maxPixelSize: 1200)
+            image=cached.image
+        } catch let error as RemoteImageCache.LoadError {
+            switch error {
+            case .notImage:
                 state = .notImage
+            default:
+                state = .failed
             }
         } catch {
             state = .failed
