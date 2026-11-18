@@ -30,10 +30,12 @@ enum MediaDownloader {
         }
         let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? ""
         let ext = fileExtension(contentType: contentType, data: data, url: url)
-        let fileURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("easyswift-\(UUID().uuidString).\(ext)")
+        // 并发保存同一批图时，只用 UUID 命名仍可能撞名；createUniqueFile 用内核级判重
+        let fileURL: URL
         do {
-            try data.write(to: fileURL)
+            fileURL=try FileUtil.createUniqueFile(in: FileManager.default.temporaryDirectory,
+                                                  preferredName: "easyswift-\(UUID().uuidString).\(ext)",
+                                                  contents: data)
         } catch {
             throw MediaSaveError.downloadFailed(error.localizedDescription)
         }

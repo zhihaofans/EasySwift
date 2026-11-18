@@ -66,7 +66,7 @@ actor RemoteImageCache {
         memory.countLimit=200
         memory.totalCostLimit=64 * 1024 * 1024
 
-        try? FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true)
+        try? FileUtil.createDirectoryIfNeeded(self.directory)
     }
 
     /// 取图：内存 → 磁盘 → 网络。同一 URL+尺寸的并发请求会合并成一次下载。
@@ -84,7 +84,7 @@ actor RemoteImageCache {
 
         let task=Task<CachedImage, Error> { [directory, fetcher] in
             let diskFile=directory.appendingPathComponent(Self.fileName(for: key))
-            if let data=try? Data(contentsOf: diskFile),
+            if let data=try? FileUtil.read(diskFile),
                let image=PlatformImage(data: data)
             {
                 debugPrint(.ui, "[图片缓存] 命中磁盘 \(url.host ?? "?")\(url.path.prefix(40))")
@@ -118,7 +118,7 @@ actor RemoteImageCache {
 
             // 落盘用重编码后的 JPEG：体积小、方向已归一，下次直接读，省掉重复解码
             if let encoded=ImageUtil.reencode(data, to: .jpeg, quality: 0.85, maxPixelSize: maxPixelSize) {
-                try? encoded.write(to: diskFile, options: [.atomic])
+                try? FileUtil.write(encoded, to: diskFile)
             }
             let cost=Int(Date().timeIntervalSince(started) * 1000)
             debugPrint(.ui, "[图片缓存] 网络下载 \(url.host ?? "?")\(url.path.prefix(30)) \(data.count / 1024)KB \(cost)ms max=\(maxPixelSize)")

@@ -137,7 +137,7 @@ final class FileLogBackend: LogBackend, @unchecked Sendable {
         dayFormatter.timeZone=TimeZone(identifier: "Asia/Shanghai")
 
         queue.sync { [self] in
-            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try? FileUtil.createDirectoryIfNeeded(directory)
             pruneOldFiles()
         }
     }
@@ -200,7 +200,7 @@ final class FileLogBackend: LogBackend, @unchecked Sendable {
         for file in files where file.lastPathComponent.hasPrefix("app-") {
             let modified=(try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
             if let modified, modified < deadline {
-                try? fileManager.removeItem(at: file)
+                try? FileUtil.removeIfExists(file)
             }
         }
     }
@@ -317,7 +317,7 @@ enum AppLogging {
         let name="easyswift-log-\(formatter.string(from: Date())).txt"
         let url=FileManager.default.temporaryDirectory.appendingPathComponent(name)
         do {
-            try text.write(to: url, atomically: true, encoding: .utf8)
+            try FileUtil.write(Data(text.utf8), to: url)
             return url
         } catch {
             debugPrint(.app, "[日志导出] 写文件失败: \(error.localizedDescription)")

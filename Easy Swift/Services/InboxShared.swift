@@ -77,6 +77,8 @@ enum InboxFile {
     }
 
     /// 建目录 + 写一个探针文件，能写才算可用
+    /// 注意：这里刻意**不用** SwiftUtils 的 `FileUtil` —— 本文件同时编进分享扩展，
+    /// 而扩展目标是刻意不链接 SwiftUtils 的（见文件头）。统一化的诱惑会让扩展编译失败。
     static func isWritableDirectory(_ directory: URL) -> Bool {
         let fileManager=FileManager.default
         do {

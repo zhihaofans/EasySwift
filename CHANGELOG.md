@@ -39,6 +39,13 @@
     `permissionMisconfigured`，文案指向「配置缺失」而不是让用户去设置；批量保存同样整批停下
   - swift-log 移除 → 项目只用 `LogUtil.d`，无 `Logger` / `metadata` 用法，无需改调用点
 
+**变更**
+
+- 文件写入统一走 SwiftUtils `FileUtil`（0.0.33）：媒体下载临时文件改用 `createUniqueFile`（内核级判重，
+  并发保存不再撞名），图片缓存落盘 / 日志导出 / 日志目录清理改用 `FileUtil.write` / `read` / `removeIfExists`
+  - **例外**：`InboxShared` 保持 Foundation 写法 —— 它同时编进分享扩展，而扩展刻意不链接 SwiftUtils；
+    已在代码里注明原因，避免以后"统一化"把扩展编译搞挂
+
 **修复**
 
 - 分享扩展能拉起主 App：按 OhMyFile 的做法，responder 链上强转 `UIApplication` 调
