@@ -30,6 +30,15 @@
 
 **变更**
 
+- **解析时限与重试收口到 `ParseBudget`**：HTTP 12s / 抖音 WebView 18s / JS 求值 3s / 整次解析 45s，
+  解析器里不再各写魔法数字；网络类错误自动重试（3 次，0.6s → 1.2s），
+  风控、登录墙、内容不存在不重试（重试只会让用户多等）
+- **装饰性请求限时 4s**：分享者昵称、抖音 sec_uid 这类「有更好、没有也能用」的信息。
+  实测小红书昵称接口会跳验证码页、把整次解析拖到 **26 秒**（那条笔记本身 1 秒内就解析完了）
+- 文件写入统一走 SwiftUtils `FileUtil`（0.0.33）：媒体下载临时文件改用 `createUniqueFile`（内核级判重，
+  并发保存不再撞名），图片缓存落盘 / 日志导出 / 日志目录清理改用 `FileUtil.write` / `read` / `removeIfExists`
+  - **例外**：`InboxShared` 保持 Foundation 写法 —— 它同时编进分享扩展，而扩展刻意不链接 SwiftUtils；
+    已在代码里注明原因，避免以后"统一化"把扩展编译搞挂
 - 日志后端切换：App 启动时配置 `OSLogBackend`（subsystem = bundle id），DEBUG 为
   「控制台 + 系统日志」双写、RELEASE 只写系统日志；去掉 `debugPrint` 里对抗 stdout 缓冲的 `fflush`
   （实测：只切 OSLog 后 `devicectl --console` 里应用日志全消失，所以 DEBUG 保留控制台通道）
@@ -39,15 +48,12 @@
     `permissionMisconfigured`，文案指向「配置缺失」而不是让用户去设置；批量保存同样整批停下
   - swift-log 移除 → 项目只用 `LogUtil.d`，无 `Logger` / `metadata` 用法，无需改调用点
 
-**变更**
-
-- 文件写入统一走 SwiftUtils `FileUtil`（0.0.33）：媒体下载临时文件改用 `createUniqueFile`（内核级判重，
-  并发保存不再撞名），图片缓存落盘 / 日志导出 / 日志目录清理改用 `FileUtil.write` / `read` / `removeIfExists`
-  - **例外**：`InboxShared` 保持 Foundation 写法 —— 它同时编进分享扩展，而扩展刻意不链接 SwiftUtils；
-    已在代码里注明原因，避免以后"统一化"把扩展编译搞挂
-
 **修复**
 
+- 图片「加载失败」其实是**视图取消**：网格用 `.task(id:)` 加载，滚动复用会取消任务，
+  原来一把 `catch` 把取消也显示成失败（大图预览是独立视图、不会被取消，所以「点开大图又正常」）。
+  现在取消原样抛出并保持加载态；CDN 临时失败（5xx / 429 / 408 / 连接抖动）自动重试一次，403/404 不重试；
+  失败路径也补了日志（此前静默）
 - 分享扩展能拉起主 App：按 OhMyFile 的做法，responder 链上强转 `UIApplication` 调
   `open(_:options:)`，并延后 0.6 秒再 `completeRequest`（此前失败的原因：`responds(to:)+perform`
   命中的不是 UIApplication；complete 太早会把唤起取消）。
