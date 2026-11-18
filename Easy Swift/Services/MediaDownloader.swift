@@ -83,7 +83,7 @@ enum MediaDownloader {
 }
 
 /// 保存相关的错误：文案直接面向用户，不要出现状态码以外的技术词
-enum MediaSaveError: LocalizedError {
+enum MediaSaveError: LocalizedError, Equatable {
     /// 用户拒绝过、或刚在授权弹窗里点了不允许 —— 能靠用户自己去设置改
     case permissionDenied
     /// 被系统限制（屏幕使用时间 / 描述文件 / MDM）—— 去设置里也改不了，文案不能骗人

@@ -59,7 +59,7 @@ struct LinkParseResult {
 }
 
 /// 解析错误：`kind` 决定用户看到的文案，**不要**把 HTTP 状态码直接甩给用户。
-enum LinkParseError: LocalizedError {
+enum LinkParseError: LocalizedError, Equatable {
     /// 不支持的网站 / 链接形态
     case unsupported
     /// 需要登录才能看（平台登录墙）
