@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import SwiftUtils
 
 enum VideoHTTP {
     /// UA 分档。
@@ -41,7 +42,7 @@ enum VideoHTTP {
                     ua: String = UA.desktopChrome,
                     headers: [String: String] = [:],
                     cookies: String? = nil,
-                    timeout: TimeInterval = 20) async throws -> Response
+                    timeout: TimeInterval = ParseBudget.httpRequest) async throws -> Response
     {
         var request = URLRequest(url: url)
         request.timeoutInterval = timeout
@@ -57,7 +58,13 @@ enum VideoHTTP {
         }
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            // 传输层超时用 request.timeoutInterval，这里再套一层硬上限：
+            // 某些系统版本/代理下 timeoutInterval 不生效，会一直挂着
+            let preparedRequest=request
+            let payload=try await withTimeout(ParseBudget.httpRequest) {
+                SendableBox(value: try await URLSession.shared.data(for: preparedRequest))
+            }
+            let (data, response)=payload.value
             guard let http = response as? HTTPURLResponse else {
                 throw LinkParseError.unknown("请求没有拿到 HTTP 响应")
             }
@@ -85,7 +92,7 @@ enum VideoHTTP {
                      ua: String = UA.desktopChrome,
                      headers: [String: String] = [:],
                      cookies: String? = nil,
-                     timeout: TimeInterval = 10) async -> Int?
+                     timeout: TimeInterval = ParseBudget.httpRequest / 2) async -> Int?
     {
         var request = URLRequest(url: url)
         request.httpMethod = "HEAD"

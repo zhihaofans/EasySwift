@@ -15,6 +15,7 @@
 //
 
 import Foundation
+import SwiftUtils
 
 /// 解析结果
 struct LinkParseResult {
@@ -111,6 +112,8 @@ enum LinkParseStage: Equatable, Sendable {
     case waitingWebData
     /// HTTP 已经拿到 N 张图，还在等页面补动图
     case waitingMotions(count: Int)
+    /// 网络抖动，正在重试（第 N 次）
+    case retryingNetwork(attempt: Int)
     /// 正在逐张探测去水印原图是否可用
     case checkingOriginalImages
 
@@ -128,6 +131,8 @@ enum LinkParseStage: Equatable, Sendable {
             return "浏览器已打开，等待页面数据…"
         case let .waitingMotions(count):
             return "已拿到 \(count) 张图，正在补动图…"
+        case let .retryingNetwork(attempt):
+            return "网络不稳，正在重试（第 \(attempt) 次）…"
         case .checkingOriginalImages:
             return "正在校验原图…"
         }
@@ -195,11 +200,21 @@ enum LinkParserRegistry {
     }
 
     /// 按链接分发给对应解析器
+    /// 统一解析入口：整次解析受 `ParseBudget.wholeParse` 约束，网络错误自动重试。
+    ///
+    /// 页面层只调这个，不要自己套超时 —— 否则两层超时叠在一起，用户等的是两者之和。
     static func parse(url: URL, progress: LinkParseProgress = .silent) async throws -> LinkParseResult {
-        guard let parser = parsers.first(where: { $0.canParse(url) }) else {
+        guard let parser=parsers.first(where: { $0.canParse(url) }) else {
             throw LinkParseError.unsupported
         }
-        return try await parser.parse(url: url, progress: progress)
+
+        let boxed=try await ParseBudget.run(
+            onRetry: { attempt in progress(.retryingNetwork(attempt: attempt)) },
+            operation: {
+                SendableBox(value: try await parser.parse(url: url, progress: progress))
+            }
+        )
+        return boxed.value
     }
 
     /// 该链接由哪个解析器负责（nil = 不支持）

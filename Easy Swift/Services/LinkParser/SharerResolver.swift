@@ -18,6 +18,7 @@
 //
 
 import Foundation
+import SwiftUtils
 
 /// 分享者信息
 struct LinkSharer: Equatable {
@@ -84,6 +85,17 @@ enum SharerResolver {
     /// 尽力而为：用 App 里的登录态抓一次主页，取分享者昵称。
     /// 失败（风控/未登录/结构变化）就返回 nil，界面回落显示账号 ID，不算错误。
     static func rednoteNickname(uid: String, cookieHeader: String?) async -> String? {
+        // 昵称只是装饰：超过 4 秒就放弃，别让它拖住整次解析（实测会跳到验证码页、耗 26 秒）
+        let boxed=try? await withTimeout(ParseBudget.decoration) {
+            SendableBox(value: await fetchRednoteNickname(uid: uid, cookieHeader: cookieHeader))
+        }
+        if boxed == nil {
+            debugPrint(.parsing, "[分享者] 昵称查询超过 \(Int(ParseBudget.decoration))s，跳过")
+        }
+        return boxed?.value
+    }
+
+    private static func fetchRednoteNickname(uid: String, cookieHeader: String?) async -> String? {
         guard let url=URL(string: "https://www.xiaohongshu.com/user/profile/\(uid)") else { return nil }
         do {
             let response=try await VideoHTTP.get(url, ua: VideoHTTP.UA.iOSSafari, headers: [
@@ -273,7 +285,11 @@ enum SharerResolver {
         guard let resolvedID=accountID else { return nil }
 
         if lookup, identity.accountID != nil {
-            let info=await douyinLookup(uid: resolvedID)
+            let lookup: (nickname: String?, secUID: String?)?
+            lookup=try? await withTimeout(ParseBudget.decoration) { () -> SendableBox<(nickname: String?, secUID: String?)> in
+                SendableBox(value: await douyinLookup(uid: resolvedID))
+            }.value
+            let info=lookup ?? (nil, nil)
             nickname=info.nickname
             if let lookedUpSec=info.secUID { secUID=lookedUpSec }
         }

@@ -51,9 +51,9 @@ enum DouyinExtractError: Error, CustomStringConvertible {
 final class DouyinWebExtractor {
     /// 实测成功样本 4–7 秒；给 18 秒余量即可。
     /// 超时后由调用方（HTTP 竞速）兜底，不让用户干等 40 秒
-    private static let timeout: TimeInterval = 18
+    private static let timeout: TimeInterval = ParseBudget.webViewReady
     private static let pollInterval: TimeInterval = 1.2
-    private static let evalTimeout: TimeInterval = 3
+    private static let evalTimeout: TimeInterval = ParseBudget.jsEvaluation
 
     /// 全局只允许一个隐藏 WebView 存活：批量粘贴多条链接时不能连开
     private static var isRunning = false
