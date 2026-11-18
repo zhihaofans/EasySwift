@@ -869,14 +869,19 @@ private struct RemoteImageView: View {
             // 目标像素 1200：列表里够清晰，也避免整张原图解码进内存；EXIF 方向由 ImageUtil 转正
             let cached=try await RemoteImageCache.shared.image(for: url, referer: referer, maxPixelSize: 1200)
             image=cached.image
+        } catch is CancellationError {
+            // 视图被复用/滑走：保持加载态即可，下次出现会重新请求（不能显示"加载失败"）
+            debugPrint(.ui, "[图片] 请求被取消（视图复用）\(url.absoluteString.prefix(50))")
         } catch let error as RemoteImageCache.LoadError {
             switch error {
             case .notImage:
                 state = .notImage
             default:
+                debugPrint(.ui, "[图片] 加载失败 \(url.host ?? "?")\(url.path.prefix(30))：\(error.localizedDescription)")
                 state = .failed
             }
         } catch {
+            debugPrint(.ui, "[图片] 加载失败 \(url.host ?? "?")\(url.path.prefix(30))：\(error.localizedDescription)")
             state = .failed
         }
     }

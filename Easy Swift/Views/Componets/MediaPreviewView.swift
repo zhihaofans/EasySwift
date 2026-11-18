@@ -257,6 +257,8 @@ private struct PreviewImagePage: View {
             let referer=MediaPreviewItem.headers(for: url)["Referer"]
             let cached=try await RemoteImageCache.shared.image(for: url, referer: referer, maxPixelSize: 3000)
             image = cached.image
+        } catch is CancellationError {
+            // 预览被关掉/换页：保持加载态，不显示"加载失败"
         } catch {
             debugPrint("[预览] 图片加载失败 \(url.absoluteString.prefix(80)): \(error.localizedDescription)")
             failed = true

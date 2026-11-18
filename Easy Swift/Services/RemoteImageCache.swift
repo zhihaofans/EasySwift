@@ -98,18 +98,39 @@ actor RemoteImageCache {
             }
 
             let started=Date()
-            let data: Data
-            do {
-                let (body, response)=try await fetcher(request)
-                if let http=response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                    throw LoadError.httpStatus(http.statusCode)
+            var data: Data?
+            // 临时性失败（5xx / 429 / 连接抖动）重试一次：CDN 偶发 503 很常见，
+            // 用户看到的就是"有一张图加载失败，点开大图又好了"
+            for attempt in 1...2 {
+                do {
+                    let (body, response)=try await fetcher(request)
+                    if let http=response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                        if Self.isTransient(status: http.statusCode), attempt == 1 {
+                            debugPrint(.ui, "[图片缓存] \(url.host ?? "?")\(url.path.prefix(30)) 返回 \(http.statusCode)，300ms 后重试")
+                            try? await Task.sleep(for: .milliseconds(300))
+                            continue
+                        }
+                        throw LoadError.httpStatus(http.statusCode)
+                    }
+                    data=body
+                    break
+                } catch is CancellationError {
+                    // 视图被复用/滑走导致的取消：不是失败，原样抛给调用方
+                    throw CancellationError()
+                } catch let error as URLError where error.code == .cancelled {
+                    throw CancellationError()
+                } catch let error as LoadError {
+                    throw error
+                } catch {
+                    if attempt == 1 {
+                        debugPrint(.ui, "[图片缓存] \(url.host ?? "?")\(url.path.prefix(30)) 连接失败（\(error.localizedDescription)），300ms 后重试")
+                        try? await Task.sleep(for: .milliseconds(300))
+                        continue
+                    }
+                    throw LoadError.transport(error.localizedDescription)
                 }
-                data=body
-            } catch let error as LoadError {
-                throw error
-            } catch {
-                throw LoadError.transport(error.localizedDescription)
             }
+            guard let data else { throw LoadError.transport("多次尝试后仍未拿到数据") }
 
             // 按 EXIF 方向转正 + 缩到目标像素（ImageIO 直接出缩略图，不解码原图）
             guard let cgImage=ImageUtil.downsample(data, maxPixelSize: maxPixelSize) else {
@@ -143,6 +164,11 @@ actor RemoteImageCache {
     }
 
     // MARK: - 键与文件
+
+    /// 值得重试一次的状态码：服务端临时问题与限流；4xx 里 403/404 重试没意义
+    static func isTransient(status: Int) -> Bool {
+        (500...599).contains(status) || status == 429 || status == 408
+    }
 
     static func key(url: URL, maxPixelSize: Int) -> String {
         "\(canonical(url: url))#\(maxPixelSize)"
