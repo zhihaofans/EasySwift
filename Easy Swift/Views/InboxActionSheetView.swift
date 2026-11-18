@@ -69,7 +69,7 @@ struct InboxActionSheetView: View {
                 HStack(spacing: 6) {
                     Text(item.sourceValue.title)
                     Text("·")
-                    Text(item.date.formatted(date: .abbreviated, time: .shortened))
+                    Text(RelativeTimeFormatter.string(from: item.date))
                     if item.handled {
                         Text("· 已处理")
                     }

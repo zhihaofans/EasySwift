@@ -130,7 +130,7 @@ struct InboxView: View {
                     Text("·")
                     Text(item.sourceValue.title)
                     Text("·")
-                    Text(item.date.formatted(date: .omitted, time: .shortened))
+                    Text(RelativeTimeFormatter.string(from: item.date))
                     if !item.handled {
                         Text("· 未处理").foregroundStyle(.tint)
                     }
