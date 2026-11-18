@@ -22,7 +22,8 @@
 - 依赖：**SwiftUtils（exactVersion 0.0.33，已无第三方依赖）**。0.0.29~0.0.33 的两个破坏性变更：**移除 swift-log**（`LogUtil.metadata` 改 `[String: String]?`）、**`PermissionUtil` 新增 `.misconfigured`**（Info.plist 缺 usage key）；另新增 `ImageUtil` / `MediaUtil` / `PDFUtil` / `FileUtil` 原子读写 / `RelativeTimeFormatter` / `withTimeout` / `RetryPolicy` / `LogExporter` / 可插拔 `LogBackend`。0.0.26 起已剥离 Alamofire，工程不再依赖它；`HttpUtil` 是纯 Foundation 实现，`setHeader` 收 `[String: String]`，回调固定在主队列。0.0.27 起 `KeychainUtil` 改用数据保护钥匙串（见 §3.2）。0.0.28 补齐 `PermissionUtil`（权限状态分档 + 能力探测 + Info.plist 键检查），`CameraUtil().checkCameraPermissions(...)` 已改为它的封装，签名不变。
 - 版本唯一真相源是 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`；代码只经 `AppUtil().getAppVersion()` / `getAppBuild()` 读 `Bundle`，不写常量。
 - 文案走 String Catalog（[Localizable.xcstrings](<Easy Swift/Localizable.xcstrings>)，源语言 `zh-Hans`）：直接写中文即可，构建时自动收集，不要手写英文再翻译。
-- **没有测试 target**（见 §5 的替代验证手段）。
+- **有单元测试 target**：`Easy SwiftTests`（Swift Testing，`@testable import Easy_Swift`），
+  iOS 模拟器与 macOS 都能跑；新增测试文件放进 `Easy SwiftTests/` 会自动进 target（同步文件夹）。
 
 ## 2. 命令
 
@@ -36,6 +37,10 @@ xcodebuild build -project "Easy Swift.xcodeproj" -scheme "Easy Swift" \
 
 xcodebuild build -project "Easy Swift.xcodeproj" -scheme "Easy Swift" \
   -destination 'generic/platform=iOS' -configuration Release CODE_SIGNING_ALLOWED=NO
+
+# 单元测试（Swift Testing；只跑逻辑，不需要装到设备）
+xcodebuild test -project "Easy Swift.xcodeproj" -scheme "Easy Swift" \
+  -destination 'platform=iOS Simulator,name=<任选可用模拟器>'
 
 # 依赖解析（Package.resolved 与工程 pin 不一致、或 clean 之后）
 xcodebuild -resolvePackageDependencies -project "Easy Swift.xcodeproj" -scheme "Easy Swift"
@@ -131,6 +136,7 @@ xcrun simctl io "<设备名>" screenshot /tmp/easy-swift.png
 | 平台差异类型 | [PlatformTypes.swift](<Easy Swift/Utils/PlatformTypes.swift>) |
 | 调试输出 | [DebugLog.swift](<Easy Swift/Utils/DebugLog.swift>) |
 | 版本号 | `project.pbxproj` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`（改完回读产物里的版本号） |
+| 单元测试 | [Easy SwiftTests/](<Easy SwiftTests>)（Swift Testing；同步文件夹，新增文件自动进 target） |
 | macOS 分享 | [MacShareSupport.swift](<Easy Swift/Utils/MacShareSupport.swift>) |
 
 边界：
@@ -142,8 +148,11 @@ xcrun simctl io "<设备名>" screenshot /tmp/easy-swift.png
 
 ## 5. 验证与完成标准
 
-- **没有测试 target**，所以"编译通过"不是完成标准。按改动类型选验证方式：
-  - 纯逻辑（解析、编码、日期换算）：抽成不依赖 UI 的函数，用仓库外的临时 harness（`swiftc` 直接编真实源文件 + 断言）跑，并把"验证了什么"写进回复。
+- "编译通过"不是完成标准。按改动类型选验证方式：
+  - 纯逻辑（解析、编码、日期换算）：**写成 `Easy SwiftTests` 里的用例**（Swift Testing 的 `@Test` / `#expect`），
+    跑 `xcodebuild test` 并把用例数写进回复。harness 只留给一次性实验或验证库行为（不留在仓库外当长期手段）。
+  - 跨平台 harness 跑 App 代码会读钥匙串（小红书 Cookie 等），macOS 会弹授权框：
+    **会话/解析相关验证放模拟器或真机**，别用仓库外 `swiftc` 编出来的二进制跑。
   - 网络/解析：**必须用真实链接跑一次**，贴出关键字段（标题、作者、图片数、`finalURL`）。只看编译不算。
   - UI/数据：模拟器安装启动 + 截图，确认页面渲染、列表非空、无 crash 日志。
 - 修 bug 时优先补一条"它回来就会红"的用例或可复现步骤；别只断言 `!isEmpty`。
